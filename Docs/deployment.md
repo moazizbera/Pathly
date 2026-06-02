@@ -7,7 +7,7 @@ Deploy Pathly to Cloudflare Workers with Supabase as the backend.
 ## Before You Deploy
 
 1. Make sure the project builds locally with `npm run build`.
-2. Make sure the Cloudflare adapter build works with `npx @opennextjs/cloudflare build`.
+2. If you need the raw Next.js production build only, use `npm run next:build`.
 3. Create a Supabase project.
 4. Run `Docs/supabase-schema.sql` in the Supabase SQL editor.
 5. Configure Supabase Auth redirect URLs for both local and deployed environments.
@@ -26,12 +26,15 @@ For Cloudflare Workers Builds, add them in Build Variables and Secrets so both t
 ## Cloudflare Steps
 
 1. Create a Cloudflare Workers project or connect the GitHub repository through Workers Builds.
-2. Set the build command to `npm run cf:build`.
-3. Set the deploy command to `npm run cf:deploy`.
+2. Use either of these working configurations:
+	- Build command: `npm run build`
+	- Deploy command: `npx wrangler deploy`
+	- or Build command: `npm run cf:build`
+	- Deploy command: `npm run cf:deploy`
 4. Add the two Supabase environment variables.
 5. Deploy.
 
-Do not configure Workers Builds with `npm run build` and `npx wrangler deploy` for this repository. That path only runs the raw Next.js build and will fail later because the OpenNext Cloudflare bundle was never generated.
+`npm run build` now runs the OpenNext Cloudflare build, so Cloudflare's default build path can produce the compiled bundle that deploy expects.
 
 If deploying from the CLI instead of Workers Builds, run:
 

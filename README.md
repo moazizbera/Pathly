@@ -168,14 +168,17 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 npm run deploy
 ```
 
-For Cloudflare Workers Builds:
+For Cloudflare Workers Builds, both of these configurations work:
+
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+
+or:
 
 - Build command: `npm run cf:build`
 - Deploy command: `npm run cf:deploy`
 
-Do not use `npm run build` followed by `npx wrangler deploy` in Workers Builds for this project. `npm run build` only runs the Next.js build, while Cloudflare deployment also needs the OpenNext transformation step.
-
-Pathly currently uses `next build --webpack` for production builds so OpenNext receives the build trace artifacts it needs.
+`npm run build` now runs the OpenNext Cloudflare build. If you need the raw Next.js production build only, use `npm run next:build`.
 
 ## Submission Checklist
 
