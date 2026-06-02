@@ -26,10 +26,12 @@ For Cloudflare Workers Builds, add them in Build Variables and Secrets so both t
 ## Cloudflare Steps
 
 1. Create a Cloudflare Workers project or connect the GitHub repository through Workers Builds.
-2. Set the build command to `npx @opennextjs/cloudflare build`.
-3. Set the deploy command to `npx @opennextjs/cloudflare deploy`.
+2. Set the build command to `npm run cf:build`.
+3. Set the deploy command to `npm run cf:deploy`.
 4. Add the two Supabase environment variables.
 5. Deploy.
+
+Do not configure Workers Builds with `npm run build` and `npx wrangler deploy` for this repository. That path only runs the raw Next.js build and will fail later because the OpenNext Cloudflare bundle was never generated.
 
 If deploying from the CLI instead of Workers Builds, run:
 

@@ -2,31 +2,85 @@
 
 Smart planning for every role.
 
-Pathly is a role-aware productivity platform built for the Design4Future hackathon. Instead of treating every user the same, Pathly adapts its planning experience for students, employees, and teachers, helping each person understand what to do next and why.
+Pathly is a role-aware productivity platform built for the Design4Future hackathon. It helps people who balance different responsibilities avoid decision fatigue by turning a messy task list into one clear next move.
 
-## What Pathly Does
+## One-Line Pitch
 
-- Supports sign up and login with Supabase Auth
-- Creates a role-aware productivity experience based on category
-- Protects the dashboard behind authentication
-- Stores profile and task data in Supabase
-- Recommends a best next action instead of showing only a flat to-do list
-- Seeds starter tasks and profile context to make the first-run experience stronger
-- Includes an in-app `/demo` walkthrough for hackathon judges and live presentations
+Pathly helps students, employees, and teachers understand what to do next and why, instead of dumping everything into one generic to-do list.
 
-## Product Direction
+## The Problem
 
-Pathly is built around one core idea:
+Most planning tools are good at storing tasks but weak at helping people decide what matters first.
 
-> People do not just need a list of everything they should do. They need a clear next step that matches their role, time, and context.
+That becomes worse when the user is not just one type of person. A student who also works, or a teacher with admin and class prep, does not need a flat list. They need a planner that understands role context, overlap, urgency, and limited time.
 
-Current supported roles:
+## The Solution
 
-- Student
-- Employee
-- Teacher
+Pathly adapts the planning experience to the user’s roles, goals, and availability.
 
-## Stack
+Instead of stopping at task storage, it:
+
+- recommends the best next action
+- explains why that task matters now
+- separates planning by role
+- flags overlap between roles
+- keeps the week visible through a role-aware calendar and task lanes
+
+## Why It Stands Out
+
+- Role-aware planning: supports `Student`, `Employee`, and `Teacher`
+- Multi-role visibility: shows per-role tasks, suggestions, and overlaps
+- Guided prioritization: promotes one next step, not just a long backlog
+- Judge-ready storytelling: includes an in-app `/demo` route for presentations
+- Clear UX: dashboard, suggestions, task list, and calendar now share the same role-lane language
+
+## Core Features
+
+- Sign up and login with Supabase Auth
+- Personalized onboarding with role selection
+- Profile with main goal, focus preference, and availability
+- AI-style recommendation engine for the next best action
+- Task creation, editing, completion, and next-week AI suggestions
+- Role-specific planning lanes for Student, Employee, Teacher, Shared, and General
+- Overlap detection when one task supports more than one role
+- Weekly calendar with role-aware color coding
+- Profile preview and judge demo route
+
+## Multi-Role Planning
+
+One of Pathly’s strongest differentiators is that it no longer hides multi-role behavior behind one blended dashboard.
+
+Users can now see:
+
+- a separate plan for each selected role
+- role-specific suggestions for next week
+- shared tasks that overlap across roles
+- general tasks that help regardless of role
+- the same role meaning carried across suggestions, task lists, and calendar items
+
+## Demo Flow For Judges
+
+If you are evaluating the project, the recommended walkthrough is:
+
+1. Open `/demo` to frame the story and see the live pitch surface.
+2. Show the signup flow and the three role options.
+3. Open the dashboard and highlight the recommended next action.
+4. Show the role-specific planning panels and overlap notices.
+5. Open AI suggest for next week to show Student, Employee, Teacher, Shared, and General sections.
+6. Show the task list and calendar to demonstrate that the same role system stays consistent across the product.
+7. Open `/profile` to show how Pathly adapts when the user changes focus and role context.
+
+## Hackathon Fit
+
+Pathly is designed to perform well against common hackathon judging criteria:
+
+- Impact: reduces decision fatigue instead of just storing tasks
+- Originality: role-aware and multi-role planning is more specific than a generic productivity app
+- Execution: real auth, persistence, planning logic, and deployment wiring are implemented
+- UX: the interface is designed to guide, not overwhelm
+- Presentation quality: the app includes a built-in demo route for storytelling
+
+## Built With
 
 - Next.js 16
 - React 19
@@ -39,10 +93,10 @@ Current supported roles:
 
 ## Project Structure
 
-- `src/app` - routes, pages, server actions
-- `src/components` - reusable auth and dashboard UI
-- `src/lib` - Supabase clients, dashboard data logic, validation
-- `Docs` - product planning, auth setup, MVP notes, Supabase schema
+- `src/app` - routes, pages, and server actions
+- `src/components` - reusable auth, dashboard, demo, and profile UI
+- `src/lib` - Supabase clients, planning logic, and validation
+- `Docs` - product planning, auth setup, deployment, and submission materials
 
 ## Local Setup
 
@@ -89,17 +143,15 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-## Cloudflare Deploy
+## Cloudflare Deployment
 
-Pathly is now wired for Cloudflare Workers using `@opennextjs/cloudflare`.
+Pathly is wired for Cloudflare Workers using `@opennextjs/cloudflare`.
 
-### Local Workers preview
+### Preview in the Workers runtime
 
 ```bash
 npm run preview
 ```
-
-This builds the app with OpenNext and runs it locally in the Cloudflare Workers runtime.
 
 ### Required Cloudflare environment variables
 
@@ -110,7 +162,7 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
-### Deploy command
+### Deploy
 
 ```bash
 npm run deploy
@@ -118,30 +170,28 @@ npm run deploy
 
 For Cloudflare Workers Builds:
 
-- Build command: `npx @opennextjs/cloudflare build`
-- Deploy command: `npx @opennextjs/cloudflare deploy`
+- Build command: `npm run cf:build`
+- Deploy command: `npm run cf:deploy`
 
-Pathly currently uses `next build --webpack` for production builds so the OpenNext adapter receives the trace artifacts it needs for Cloudflare deployment.
+Do not use `npm run build` followed by `npx wrangler deploy` in Workers Builds for this project. `npm run build` only runs the Next.js build, while Cloudflare deployment also needs the OpenNext transformation step.
 
-## Current Flow
+Pathly currently uses `next build --webpack` for production builds so OpenNext receives the build trace artifacts it needs.
 
-1. User lands on a branded homepage
-2. User can open `/demo` for a guided judge walkthrough of the product story
-3. User signs up and chooses a category
-4. Auth metadata is stored with Supabase
-5. Dashboard creates or restores a profile
-6. Starter tasks are seeded if needed
-7. Pathly highlights the best next action and a category-specific coach message
+## Submission Checklist
+
+Before submitting, make sure the README still has:
+
+- final deployed URL
+- demo video URL
+- any required hackathon metadata or team details
+- updated Supabase callback URL for the live domain
 
 ## Important Docs
 
-- `Docs/analysis.md`
-- `Docs/product-spec.md`
-- `Docs/mvp-plan.md`
-- `Docs/tech-stack.md`
-- `Docs/auth-setup.md`
-- `Docs/deployment.md`
 - `Docs/submission-kit.md`
+- `Docs/deployment.md`
+- `Docs/auth-setup.md`
+- `Docs/product-spec.md`
 - `Docs/supabase-schema.sql`
 
 ## Current Status
@@ -151,29 +201,15 @@ Implemented:
 - branded landing page
 - in-app judge demo route
 - signup and login flows
-- protected dashboard
-- Supabase SSR auth structure
-- profile and task schema
-- task creation and completion
-- recommendation and coach messaging
-- urgency-based dashboard lanes
-- weekly progress strip
-- live profile preview
+- protected dashboard and profile pages
+- task creation, edit, completion, and suggestion flows
+- role-aware dashboard logic
+- multi-role planning with overlap visibility
+- role-aware calendar and grouped task list
+- Cloudflare deployment wiring with OpenNext
 
-In progress:
+Remaining before final submission:
 
-- submission packaging and publishing
-- production environment setup in Cloudflare with live Supabase credentials
-
-Next:
-
-- deploy the app to Cloudflare Workers with production Supabase credentials
-- finalize the live demo data and submission materials
-
-## Hackathon Fit
-
-Pathly is designed to score well across the Design4Future judging criteria:
-
-- Impact and originality: role-aware productivity instead of a generic planner
-- Functionality and build quality: realistic architecture with clear scope
-- Design and UX: calm, guided interface centered on one actionable next step
+- deploy the production instance
+- add final live demo links
+- verify Supabase auth callbacks on the live domain
