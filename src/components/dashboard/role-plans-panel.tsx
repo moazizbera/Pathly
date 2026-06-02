@@ -2,11 +2,11 @@ import type { DashboardData } from "@/lib/dashboard-data";
 import { planLaneTone } from "@/components/dashboard/plan-lanes";
 
 type RolePlansPanelProps = {
-  rolePlans: DashboardData["rolePlans"];
-  roleOverlaps: DashboardData["roleOverlaps"];
+  rolePlans?: DashboardData["rolePlans"];
+  roleOverlaps?: DashboardData["roleOverlaps"];
 };
 
-export function RolePlansPanel({ rolePlans, roleOverlaps }: RolePlansPanelProps) {
+export function RolePlansPanel({ rolePlans = [], roleOverlaps = [] }: RolePlansPanelProps) {
   if (rolePlans.length === 0) {
     return null;
   }
