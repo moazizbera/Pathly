@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { starterTasks } from "@/lib/dashboard-data";
-import { getSupabaseSetupMessage, isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseSetupMessage, isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("message", getSupabaseSetupMessage());
     return NextResponse.redirect(loginUrl);

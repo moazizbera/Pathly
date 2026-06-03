@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { SetupPanel } from "@/components/setup/setup-panel";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 type LoginPageProps = {
@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     ? resolvedSearchParams.message[0]
     : resolvedSearchParams.message;
 
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return (
       <SetupPanel
         eyebrow="Authentication setup"

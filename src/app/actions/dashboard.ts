@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { isValidRoleCategory } from "@/lib/auth/schema";
-import { getSupabaseSetupMessage, isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseSetupMessage, isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 export type TaskActionState = {
@@ -25,7 +25,7 @@ export async function createTask(
   _previousState: TaskActionState | undefined,
   formData: FormData,
 ): Promise<TaskActionState | undefined> {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return { error: getSupabaseSetupMessage() };
   }
 
@@ -88,7 +88,7 @@ export async function createTask(
 }
 
 export async function completeTask(formData: FormData) {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return;
   }
 
@@ -112,7 +112,7 @@ export async function completeTask(formData: FormData) {
 }
 
 export async function startTask(taskId: string): Promise<void> {
-  if (!isSupabaseConfigured() || !taskId) return;
+  if (!(await isSupabaseConfiguredAsync()) || !taskId) return;
 
   const supabase = await createClient();
   const {
@@ -135,7 +135,7 @@ export async function updateTask(
   _previousState: TaskActionState | undefined,
   formData: FormData,
 ): Promise<TaskActionState | undefined> {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return { error: getSupabaseSetupMessage() };
   }
 
@@ -203,7 +203,7 @@ export async function updateTask(
 }
 
 export async function deleteTask(taskId: string): Promise<TaskActionState | undefined> {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return { error: getSupabaseSetupMessage() };
   }
 
@@ -236,7 +236,7 @@ export async function deleteTask(taskId: string): Promise<TaskActionState | unde
 }
 
 export async function moveTaskToDate(taskId: string, dueDate: string | null): Promise<TaskActionState | undefined> {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return { error: getSupabaseSetupMessage() };
   }
 
@@ -278,7 +278,7 @@ export async function updateProfile(
   _previousState: ProfileActionState | undefined,
   formData: FormData,
 ): Promise<ProfileActionState | undefined> {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return { error: getSupabaseSetupMessage() };
   }
 

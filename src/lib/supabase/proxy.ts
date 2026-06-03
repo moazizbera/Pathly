@@ -1,16 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getSupabaseEnv, isSupabaseConfigured } from "./config";
+import { getSupabaseEnvAsync, isSupabaseConfiguredAsync } from "./config";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return supabaseResponse;
   }
 
-  const { url, publishableKey } = getSupabaseEnv();
+  const { url, publishableKey } = await getSupabaseEnvAsync();
 
   const supabase = createServerClient(
     url!,

@@ -1,11 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-import { getSupabaseEnv } from "./config";
+import { getSupabaseEnvAsync } from "./config";
 
 export async function createClient() {
   const cookieStore = await cookies();
-  const { url, publishableKey } = getSupabaseEnv();
+  const { url, publishableKey } = await getSupabaseEnvAsync();
 
   if (!url || !publishableKey) {
     throw new Error("Supabase environment variables are missing.");

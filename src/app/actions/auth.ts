@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { type AuthFormState, loginSchema, signupSchema } from "@/lib/auth/schema";
 import { starterTasks } from "@/lib/dashboard-data";
-import { getSupabaseSetupMessage, isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseSetupMessage, isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 function resolveOrigin(headersList: Awaited<ReturnType<typeof headers>>) {
@@ -29,7 +29,7 @@ export async function signUp(
   _previousState: AuthFormState | undefined,
   formData: FormData,
 ): Promise<AuthFormState | undefined> {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return { error: getSupabaseSetupMessage() };
   }
 
@@ -146,7 +146,7 @@ export async function signIn(
   _previousState: AuthFormState | undefined,
   formData: FormData,
 ): Promise<AuthFormState | undefined> {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return { error: getSupabaseSetupMessage() };
   }
 
@@ -181,7 +181,7 @@ export async function resendVerificationEmail(
   _previousState: AuthFormState | undefined,
   formData: FormData,
 ): Promise<AuthFormState | undefined> {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return { error: getSupabaseSetupMessage() };
   }
 
@@ -222,7 +222,7 @@ export async function resendVerificationEmail(
 }
 
 export async function signOut() {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     redirect("/login?message=Supabase+setup+is+still+required+before+auth+can+run.");
   }
 

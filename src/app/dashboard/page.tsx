@@ -12,7 +12,7 @@ import { LiveClock } from "@/components/dashboard/live-clock";
 import { DashboardWrapper } from "@/components/dashboard/dashboard-wrapper";
 import { SetupPanel } from "@/components/setup/setup-panel";
 import { getDashboardData } from "@/lib/dashboard-data";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 export default function DashboardPage() {
@@ -20,7 +20,7 @@ export default function DashboardPage() {
 }
 
 async function DashboardContent() {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return (
       <SetupPanel
         eyebrow="Dashboard setup"

@@ -11,8 +11,23 @@ function getCloudflareRuntimeEnv(): MaybeCloudflareEnv | undefined {
   return context?.env;
 }
 
-export function getSupabaseEnv() {
+async function getCloudflareRuntimeEnvAsync(): Promise<MaybeCloudflareEnv | undefined> {
   const runtimeEnv = getCloudflareRuntimeEnv();
+
+  if (runtimeEnv) {
+    return runtimeEnv;
+  }
+
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const context = await getCloudflareContext({ async: true });
+    return context.env as MaybeCloudflareEnv | undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveSupabaseEnv(runtimeEnv?: MaybeCloudflareEnv) {
   const publishableKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
@@ -25,8 +40,21 @@ export function getSupabaseEnv() {
   };
 }
 
+export function getSupabaseEnv() {
+  return resolveSupabaseEnv(getCloudflareRuntimeEnv());
+}
+
+export async function getSupabaseEnvAsync() {
+  return resolveSupabaseEnv(await getCloudflareRuntimeEnvAsync());
+}
+
 export function isSupabaseConfigured() {
   const { url, publishableKey } = getSupabaseEnv();
+  return Boolean(url && publishableKey);
+}
+
+export async function isSupabaseConfiguredAsync() {
+  const { url, publishableKey } = await getSupabaseEnvAsync();
   return Boolean(url && publishableKey);
 }
 

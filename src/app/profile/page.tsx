@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ProfilePageTabs } from "@/components/profile/profile-page-tabs";
 import { SetupPanel } from "@/components/setup/setup-panel";
 import { getDashboardData } from "@/lib/dashboard-data";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 export default function ProfilePage() {
@@ -12,7 +12,7 @@ export default function ProfilePage() {
 }
 
 async function ProfileContent() {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return (
       <SetupPanel
         eyebrow="Profile setup"

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { SignupForm } from "@/components/auth/signup-form";
 import { SetupPanel } from "@/components/setup/setup-panel";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
 const roleCards = [
@@ -25,7 +25,7 @@ const roleCards = [
 ];
 
 export default async function SignUpPage() {
-  if (!isSupabaseConfigured()) {
+  if (!(await isSupabaseConfiguredAsync())) {
     return (
       <SetupPanel
         eyebrow="Onboarding setup"
