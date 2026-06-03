@@ -763,10 +763,12 @@ function buildContextAwareTemplates(
 export async function suggestTasksForNextWeek(
   userCategory?: string,
   mainGoal?: string,
+  activeRole?: ActiveRole,
   existingTasks?: Array<{ title: string; subject?: string }>,
 ): Promise<{ tasks: SuggestedTask[]; error?: string }> {
   // AI logic to suggest tasks for next week based on user context
   const suggestions: SuggestedTask[] = [];
+  const focusedRole = activeRole && activeRole !== "all" ? activeRole : null;
   const goalText = mainGoal?.trim();
   const focusSubject = inferFocusSubject(existingTasks, goalText);
   const goalKeywords = extractKeywords(goalText);
@@ -935,7 +937,7 @@ export async function suggestTasksForNextWeek(
     ],
   };
 
-  const selectedRoles = parseSuggestionRoles(userCategory);
+  const selectedRoles = focusedRole ? [focusedRole] : parseSuggestionRoles(userCategory);
   const roleTemplates = (selectedRoles.length > 0 ? selectedRoles : ["Employee"]).flatMap((role) => {
     const key = role.toLowerCase();
 
@@ -963,7 +965,8 @@ export async function suggestTasksForNextWeek(
           estimatedMinutes: 60,
           priority: "high",
           reasoning: "Your main goal should create next week's first protected block, not become background intent.",
-          lane: "general",
+          roles: focusedRole ? [focusedRole] : undefined,
+          lane: focusedRole ? "role" : "general",
         },
         {
           id: "goal-review",
@@ -973,7 +976,8 @@ export async function suggestTasksForNextWeek(
           estimatedMinutes: 25,
           priority: "medium",
           reasoning: "Removing blockers early makes the rest of the week feel lighter and more predictable.",
-          lane: "general",
+          roles: focusedRole ? [focusedRole] : undefined,
+          lane: focusedRole ? "role" : "general",
         },
       ]
     : [];
@@ -992,13 +996,14 @@ export async function suggestTasksForNextWeek(
       estimatedMinutes: 45,
       priority: index === 0 ? "high" : "medium",
       reasoning: `${subject} already appears in your task list, so it should receive a deliberate planning block instead of ad-hoc attention.`,
-      lane: "general",
+      roles: focusedRole ? [focusedRole] : undefined,
+      lane: focusedRole ? "role" : "general",
     });
 
     return allTasks;
   }, []);
 
-  const personalizedTemplates = [...generalTemplates, ...roleTemplates].map((template, index) => {
+  const personalizedTemplates = [...(focusedRole ? [] : generalTemplates), ...roleTemplates].map((template, index) => {
     const titleKeyword = goalKeywords.find((keyword) => !normalizeText(template.title).includes(keyword));
     const subject = template.subject ?? focusSubject;
     const personalizedDescription = goalText
@@ -1024,10 +1029,21 @@ export async function suggestTasksForNextWeek(
   const daySeed = getDaySeed(new Date());
   const contextSeed = hashContext([
     userCategory ?? "employee",
+    focusedRole ?? "all",
     goalText ?? "",
     ...(existingTasks ?? []).map((task) => `${task.subject ?? ""}:${task.title}`),
   ]);
-  const priorityTemplates = [...contextAwareTemplates, ...goalDrivenTemplates, ...subjectDrivenTemplates];
+  const focusedContextAwareTemplates = focusedRole
+    ? contextAwareTemplates.map((template) => ({
+        ...template,
+        roles: [focusedRole] as Array<"Student" | "Employee" | "Teacher">,
+        lane: "role" as const,
+        reasoning: `${template.reasoning} This is prioritized for the ${focusedRole.toLowerCase()} view.`,
+      }))
+    : contextAwareTemplates;
+  const priorityTemplates = focusedRole
+    ? [...focusedContextAwareTemplates, ...goalDrivenTemplates, ...subjectDrivenTemplates]
+    : [...contextAwareTemplates, ...goalDrivenTemplates, ...subjectDrivenTemplates];
   const rotatedTemplates = [
     ...priorityTemplates,
     ...rotateArray(personalizedTemplates, daySeed + contextSeed),

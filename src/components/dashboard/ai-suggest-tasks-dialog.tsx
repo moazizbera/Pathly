@@ -87,7 +87,7 @@ export function AISuggestTasksDialog({
       try {
         setStage("loading");
         setError("");
-        const result = await suggestTasksForNextWeek(userCategory, mainGoal, [...existingTasks, ...createdTasks]);
+        const result = await suggestTasksForNextWeek(userCategory, mainGoal, activeRole, [...existingTasks, ...createdTasks]);
         if (result.error) {
           setError(result.error);
           setStage("review");
@@ -103,7 +103,7 @@ export function AISuggestTasksDialog({
     };
 
     generateSuggestions();
-  }, [open, userCategory, mainGoal, existingTasks, createdTasks]);
+  }, [open, userCategory, mainGoal, activeRole, existingTasks, createdTasks]);
 
   const toggleTask = (index: number) => {
     const newSet = new Set(selectedIndices);
@@ -218,7 +218,9 @@ export function AISuggestTasksDialog({
                 <p className="text-sm text-slate-300">
                   {suggestions.length === 0
                     ? "No suggestions at this time."
-                    : `Here are ${suggestions.length} priorities for next week across your roles and general planning. Pick which ones fit your plan.`}
+                    : activeRole && activeRole !== "all"
+                      ? `Here are ${suggestions.length} priorities for next week in your ${activeRole} context. Pick which ones fit this focused plan.`
+                      : `Here are ${suggestions.length} priorities for next week across your roles and general planning. Pick which ones fit your plan.`}
                 </p>
 
                 <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
