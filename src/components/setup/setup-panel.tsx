@@ -31,7 +31,7 @@ export function SetupPanel({ eyebrow, title, description, backHref, backLabel }:
         <section className="glass-card rounded-4xl p-8 sm:p-10">
           <p className="text-sm font-semibold tracking-[0.22em] text-slate-500 uppercase">Setup mode</p>
           <div className="mt-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm leading-7 text-amber-200">
-            Pathly can already render the product shell, but auth and saved task data stay disabled until Supabase is wired.
+            This environment is running in setup mode. Connect Supabase to enable auth, profiles, and saved task data.
           </div>
 
           <div className="mt-6 space-y-4">
