@@ -296,7 +296,24 @@ export async function createTask(
     || isMissingColumnError(error, "task_lane")
     || isMissingColumnError(error, "client_request_id")
   ) {
-    ({ error } = await supabase.from("tasks").insert({
+    const missingSubject = isMissingSubjectColumnError(error);
+    const missingRoleProfileId = isMissingColumnError(error, "role_profile_id");
+    const missingTaskLane = isMissingColumnError(error, "task_lane");
+    const missingClientRequestId = isMissingColumnError(error, "client_request_id");
+
+    const fallbackPayload: {
+      user_id: string;
+      title: string;
+      description: string | null;
+      due_date: string | null;
+      estimated_minutes: number;
+      priority: string;
+      status: "todo";
+      subject?: string | null;
+      role_profile_id?: string | null;
+      task_lane?: "role" | "shared" | "general";
+      client_request_id?: string | null;
+    } = {
       user_id: user.id,
       title,
       description: description || null,
@@ -304,8 +321,25 @@ export async function createTask(
       estimated_minutes: Number.isFinite(estimatedMinutes) ? estimatedMinutes : 25,
       priority: ["high", "medium", "low"].includes(priority) ? priority : "medium",
       status: "todo",
-      subject: isMissingSubjectColumnError(error) ? undefined : subject || null,
-    }));
+    };
+
+    if (!missingSubject) {
+      fallbackPayload.subject = subject || null;
+    }
+
+    if (!missingRoleProfileId) {
+      fallbackPayload.role_profile_id = roleFields.role_profile_id;
+    }
+
+    if (!missingTaskLane) {
+      fallbackPayload.task_lane = roleFields.task_lane;
+    }
+
+    if (!missingClientRequestId) {
+      fallbackPayload.client_request_id = clientRequestId;
+    }
+
+    ({ error } = await supabase.from("tasks").insert(fallbackPayload));
 
     if (isUniqueViolationError(error) && clientRequestId) {
       revalidatePath("/dashboard");
