@@ -4,6 +4,8 @@ Smart planning for every role.
 
 Pathly is a role-aware productivity platform built for the Design4Future hackathon. It helps people who balance different responsibilities avoid decision fatigue by turning a messy task list into one clear next move.
 
+Live app: https://pathly.maziz-abdelrahman.workers.dev/
+
 ## One-Line Pitch
 
 Pathly helps students, employees, and teachers understand what to do next and why, instead of dumping everything into one generic to-do list.
@@ -213,6 +215,6 @@ Implemented:
 
 Remaining before final submission:
 
-- deploy the production instance
-- add final live demo links
+- add the demo video URL
+- add any required hackathon metadata or team details
 - verify Supabase auth callbacks on the live domain
