@@ -30,6 +30,7 @@ create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   role_profile_id uuid references public.role_profiles(id) on delete set null,
+  client_request_id text,
   title text not null,
   description text,
   due_date date,
@@ -46,10 +47,12 @@ create table if not exists public.tasks (
 alter table public.tasks add column if not exists subject text;
 alter table public.tasks add column if not exists role_profile_id uuid references public.role_profiles(id) on delete set null;
 alter table public.tasks add column if not exists task_lane text default 'general';
+alter table public.tasks add column if not exists client_request_id text;
 
 create index if not exists tasks_user_id_idx on public.tasks(user_id);
 create index if not exists tasks_due_date_idx on public.tasks(due_date);
 create index if not exists tasks_role_profile_id_idx on public.tasks(role_profile_id);
+create unique index if not exists tasks_user_client_request_id_idx on public.tasks(user_id, client_request_id) where client_request_id is not null;
 create index if not exists role_profiles_user_id_idx on public.role_profiles(user_id);
 
 alter table public.profiles enable row level security;

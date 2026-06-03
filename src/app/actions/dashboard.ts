@@ -28,6 +28,10 @@ function isMissingColumnError(error: { code?: string; message?: string } | null 
   return message.includes(column.toLowerCase()) && (message.includes("schema cache") || message.includes("column"));
 }
 
+function isUniqueViolationError(error: { code?: string; message?: string } | null | undefined) {
+  return error?.code === "23505";
+}
+
 function isMissingTableError(error: { code?: string; message?: string } | null | undefined, table: string) {
   const message = error?.message?.toLowerCase() ?? "";
   return error?.code === "42P01" || (message.includes(table.toLowerCase()) && message.includes("does not exist"));
@@ -222,6 +226,7 @@ export async function createTask(
   const roleFields = await resolveTaskRoleFields(supabase, user.id, formData);
   const requestHeaders = await headers();
   const idempotencyKey = requestHeaders.get("x-action-forwarded") ?? requestHeaders.get("x-forwarded-for") ?? "same-client";
+  const clientRequestId = String(formData.get("clientRequestId") ?? "").trim() || null;
 
   const taskPayload = {
     user_id: user.id,
@@ -234,6 +239,7 @@ export async function createTask(
     subject: subject || null,
     role_profile_id: roleFields.role_profile_id,
     task_lane: roleFields.task_lane,
+    client_request_id: clientRequestId,
   };
 
   const twoMinutesAgoIso = new Date(Date.now() - 2 * 60 * 1000).toISOString();
@@ -279,7 +285,17 @@ export async function createTask(
 
   let { error } = await supabase.from("tasks").insert(taskPayload);
 
-  if (isMissingSubjectColumnError(error) || isMissingColumnError(error, "role_profile_id") || isMissingColumnError(error, "task_lane")) {
+  if (isUniqueViolationError(error) && clientRequestId) {
+    revalidatePath("/dashboard");
+    return { success: "Task already added." };
+  }
+
+  if (
+    isMissingSubjectColumnError(error)
+    || isMissingColumnError(error, "role_profile_id")
+    || isMissingColumnError(error, "task_lane")
+    || isMissingColumnError(error, "client_request_id")
+  ) {
     ({ error } = await supabase.from("tasks").insert({
       user_id: user.id,
       title,
@@ -290,6 +306,11 @@ export async function createTask(
       status: "todo",
       subject: isMissingSubjectColumnError(error) ? undefined : subject || null,
     }));
+
+    if (isUniqueViolationError(error) && clientRequestId) {
+      revalidatePath("/dashboard");
+      return { success: "Task already added." };
+    }
   }
 
   if (error) {

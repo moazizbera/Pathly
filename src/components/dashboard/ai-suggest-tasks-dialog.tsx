@@ -7,6 +7,14 @@ import { suggestTasksForNextWeek, createTask, type SuggestedTask } from "@/app/a
 import { planLaneTitle, planLaneTone, rolesToPlanLane, type PlanLane } from "@/components/dashboard/plan-lanes";
 import type { ActiveRole } from "@/lib/role-context";
 
+function makeClientRequestId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 interface AISuggestTasksDialogProps {
   open: boolean;
   onClose: () => void;
@@ -149,6 +157,7 @@ export function AISuggestTasksDialog({
         const formData = new FormData();
         formData.append("title", task.title);
         formData.append("description", task.description);
+        formData.append("clientRequestId", makeClientRequestId());
         formData.append("dueDate", dateString);
         formData.append("estimatedMinutes", String(task.estimatedMinutes));
         formData.append("priority", task.priority);

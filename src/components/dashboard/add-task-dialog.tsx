@@ -11,6 +11,14 @@ import type { ActiveRole, SupportedRole } from "@/lib/role-context";
 
 const initialState: TaskActionState = {};
 
+function makeClientRequestId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 function SubmitButton() {
   const { pending } = useFormStatus();
 
@@ -42,6 +50,7 @@ export function AddTaskDialog({
 }: AddTaskDialogProps = {}) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(createTask, initialState);
+  const [clientRequestId, setClientRequestId] = useState(makeClientRequestId);
   const formState = state ?? initialState;
   const dueDateInputId = useId();
 
@@ -54,6 +63,7 @@ export function AddTaskDialog({
 
   const openDialog: MouseEventHandler = (event) => {
     event.preventDefault();
+    setClientRequestId(makeClientRequestId());
     setOpen(true);
   };
 
@@ -96,6 +106,8 @@ export function AddTaskDialog({
           </div>
         ) : (
           <form action={action} className="space-y-4">
+            <input type="hidden" name="clientRequestId" value={clientRequestId} />
+
             <label className="block text-xs font-medium text-slate-400">
               What needs to happen?
               <input
