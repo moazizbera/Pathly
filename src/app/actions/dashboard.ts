@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 import { isValidRoleCategory } from "@/lib/auth/schema";
 import { normalizeActiveRole, type ActiveRole, type SupportedRole, isSupportedRole } from "@/lib/role-context";
@@ -51,6 +52,10 @@ type RoleProfileContext = {
   id: string;
   role: SupportedRole;
 };
+
+function normalizeTaskText(value: string | null | undefined) {
+  return (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
 
 async function getBaseProfileContext(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<BaseProfileContext> {
   let { data: profileData, error: profileError } = await supabase
@@ -215,6 +220,8 @@ export async function createTask(
   }
 
   const roleFields = await resolveTaskRoleFields(supabase, user.id, formData);
+  const requestHeaders = await headers();
+  const idempotencyKey = requestHeaders.get("x-action-forwarded") ?? requestHeaders.get("x-forwarded-for") ?? "same-client";
 
   const taskPayload = {
     user_id: user.id,
@@ -228,6 +235,47 @@ export async function createTask(
     role_profile_id: roleFields.role_profile_id,
     task_lane: roleFields.task_lane,
   };
+
+  const twoMinutesAgoIso = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+  const duplicateCandidateQuery = await supabase
+    .from("tasks")
+    .select("id, title, description, due_date, estimated_minutes, priority, status, subject, role_profile_id, task_lane, created_at")
+    .eq("user_id", user.id)
+    .gte("created_at", twoMinutesAgoIso)
+    .order("created_at", { ascending: false })
+    .limit(10)
+    .returns<Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      due_date: string | null;
+      estimated_minutes: number | null;
+      priority: string;
+      status: string;
+      subject: string | null;
+      role_profile_id: string | null;
+      task_lane: string | null;
+      created_at: string;
+    }>>();
+
+  if (!duplicateCandidateQuery.error) {
+    const duplicateTask = (duplicateCandidateQuery.data ?? []).find((task) =>
+      normalizeTaskText(task.title) === normalizeTaskText(title)
+      && normalizeTaskText(task.description) === normalizeTaskText(description || null)
+      && (task.due_date ?? null) === (dueDate || null)
+      && (task.estimated_minutes ?? 25) === (Number.isFinite(estimatedMinutes) ? estimatedMinutes : 25)
+      && normalizeTaskText(task.priority) === normalizeTaskText(priority)
+      && normalizeTaskText(task.status) === "todo"
+      && normalizeTaskText(task.subject) === normalizeTaskText(subject || null)
+      && (task.role_profile_id ?? null) === roleFields.role_profile_id
+      && (task.task_lane ?? null) === roleFields.task_lane,
+    );
+
+    if (duplicateTask) {
+      revalidatePath("/dashboard");
+      return { success: `Task already added from this ${idempotencyKey === "same-client" ? "session" : "request"}.` };
+    }
+  }
 
   let { error } = await supabase.from("tasks").insert(taskPayload);
 

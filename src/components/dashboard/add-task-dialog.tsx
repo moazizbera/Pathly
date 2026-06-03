@@ -2,6 +2,7 @@
 
 import { cloneElement, isValidElement, useEffect, useId, useState } from "react";
 import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
 import type { MouseEventHandler, ReactElement, ReactNode } from "react";
 
 import { createTask, type TaskActionState } from "@/app/actions/dashboard";
@@ -9,6 +10,20 @@ import { Dialog } from "@/components/ui/dialog";
 import type { ActiveRole, SupportedRole } from "@/lib/role-context";
 
 const initialState: TaskActionState = {};
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full rounded-full bg-linear-to-r from-cyan-500 to-cyan-600 py-3 text-sm font-semibold text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.35)] transition-all hover:shadow-[0_0_32px_rgba(34,211,238,0.5)] disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      {pending ? "Saving..." : "Save priority"}
+    </button>
+  );
+}
 
 interface AddTaskDialogProps {
   defaultDueDate?: string;
@@ -167,12 +182,7 @@ export function AddTaskDialog({
 
             {formState.error ? <p className="text-xs text-red-400">{formState.error}</p> : null}
 
-            <button
-              type="submit"
-              className="w-full rounded-full bg-linear-to-r from-cyan-500 to-cyan-600 py-3 text-sm font-semibold text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.35)] transition-all hover:shadow-[0_0_32px_rgba(34,211,238,0.5)]"
-            >
-              Save priority
-            </button>
+            <SubmitButton />
           </form>
         )}
       </Dialog>
