@@ -760,6 +760,20 @@ function buildContextAwareTemplates(
   return templates;
 }
 
+function suggestionMatchesFocusedRole(template: Pick<SuggestedTask, "title" | "description" | "subject">, role: Exclude<ActiveRole, "all">) {
+  const text = `${template.title} ${template.description} ${template.subject ?? ""}`.toLowerCase();
+
+  if (role === "Student") {
+    return /(study|exam|assignment|lecture|course|revision|notes|classmate|homework)/.test(text);
+  }
+
+  if (role === "Teacher") {
+    return /(lesson|grading|classroom|students|worksheet|teaching|curriculum|parents|class)/.test(text);
+  }
+
+  return /(enterprise|stakeholder|client|delivery|project|build|meeting|launch|review|milestone|risk)/.test(text);
+}
+
 export async function suggestTasksForNextWeek(
   userCategory?: string,
   mainGoal?: string,
@@ -1034,20 +1048,30 @@ export async function suggestTasksForNextWeek(
     ...(existingTasks ?? []).map((task) => `${task.subject ?? ""}:${task.title}`),
   ]);
   const focusedContextAwareTemplates = focusedRole
-    ? contextAwareTemplates.map((template) => ({
-        ...template,
-        roles: [focusedRole] as Array<"Student" | "Employee" | "Teacher">,
-        lane: "role" as const,
-        reasoning: `${template.reasoning} This is prioritized for the ${focusedRole.toLowerCase()} view.`,
-      }))
+    ? contextAwareTemplates
+        .filter((template) => suggestionMatchesFocusedRole(template, focusedRole))
+        .map((template) => ({
+          ...template,
+          roles: [focusedRole] as Array<"Student" | "Employee" | "Teacher">,
+          lane: "role" as const,
+          reasoning: `${template.reasoning} This is relevant to the ${focusedRole.toLowerCase()} view.`,
+        }))
     : contextAwareTemplates;
   const priorityTemplates = focusedRole
     ? [...focusedContextAwareTemplates, ...goalDrivenTemplates, ...subjectDrivenTemplates]
     : [...contextAwareTemplates, ...goalDrivenTemplates, ...subjectDrivenTemplates];
-  const rotatedTemplates = [
-    ...priorityTemplates,
-    ...rotateArray(personalizedTemplates, daySeed + contextSeed),
-  ];
+  const rotatedPersonalizedTemplates = rotateArray(personalizedTemplates, daySeed + contextSeed);
+  const rotatedTemplates = focusedRole
+    ? [
+        ...rotatedPersonalizedTemplates,
+        ...goalDrivenTemplates,
+        ...subjectDrivenTemplates,
+        ...focusedContextAwareTemplates,
+      ]
+    : [
+        ...priorityTemplates,
+        ...rotatedPersonalizedTemplates,
+      ];
 
   // Filter out duplicates with existing tasks
   const existingTitles = new Set(existingTasks?.map((t) => normalizeText(t.title)) ?? []);
