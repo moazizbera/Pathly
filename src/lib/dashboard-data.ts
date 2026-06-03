@@ -1,8 +1,20 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
+import type { ActiveRole, RoleProfileSnapshot, SupportedRole, TaskLaneValue } from "@/lib/role-context";
+import { isSupportedRole, normalizeActiveRole } from "@/lib/role-context";
+
 type ProfileRecord = {
   full_name: string | null;
   category: string | null;
+  main_goal: string | null;
+  focus_preference: string | null;
+  availability: string | null;
+  active_role: string | null;
+};
+
+type RoleProfileRecord = {
+  id: string;
+  role: string;
   main_goal: string | null;
   focus_preference: string | null;
   availability: string | null;
@@ -17,6 +29,9 @@ export type TaskRecord = {
   priority: string;
   status: string;
   subject: string | null;
+  role_profile_id: string | null;
+  task_lane: TaskLaneValue | null;
+  resolved_role?: SupportedRole | null;
 };
 
 export type DashboardData = {
@@ -26,7 +41,19 @@ export type DashboardData = {
     mainGoal: string;
     focusPreference: string;
     availability: string;
+    activeRole: ActiveRole;
   };
+  accountProfile: {
+    fullName: string;
+    category: string;
+    mainGoal: string;
+    focusPreference: string;
+    availability: string;
+    activeRole: ActiveRole;
+  };
+  activeRole: ActiveRole;
+  availableRoles: SupportedRole[];
+  roleProfiles: RoleProfileSnapshot[];
   tasks: TaskRecord[];
   progress: {
     completionRate: number;
@@ -81,7 +108,7 @@ export type DashboardData = {
     detail: string;
   }>;
   rolePlans: Array<{
-    role: "Student" | "Employee" | "Teacher";
+    role: SupportedRole;
     tasks: TaskRecord[];
     suggestion: {
       title: string;
@@ -91,7 +118,7 @@ export type DashboardData = {
   }>;
   roleOverlaps: Array<{
     title: string;
-    roles: Array<"Student" | "Employee" | "Teacher">;
+    roles: SupportedRole[];
     source: "task" | "suggestion";
   }>;
   setupHint?: string;
@@ -103,9 +130,21 @@ export type ProfilePreview = Pick<DashboardData, "recommendation" | "insights" |
   previewTasks: TaskRecord[];
 };
 
+type StarterTaskSeed = Omit<TaskRecord, "id" | "role_profile_id" | "task_lane" | "resolved_role">;
+
 function isMissingSubjectColumnError(error: { code?: string; message?: string } | null | undefined) {
   const message = error?.message?.toLowerCase() ?? "";
   return message.includes("subject") && (message.includes("schema cache") || message.includes("column"));
+}
+
+function isMissingColumnError(error: { code?: string; message?: string } | null | undefined, column: string) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return message.includes(column.toLowerCase()) && (message.includes("schema cache") || message.includes("column"));
+}
+
+function isMissingTableError(error: { code?: string; message?: string } | null | undefined, table: string) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return error?.code === "42P01" || (message.includes(table.toLowerCase()) && message.includes("does not exist"));
 }
 
 const numberWords: Record<string, number> = {
@@ -152,15 +191,105 @@ function parseProfileCategories(category: string): string[] {
     .filter(Boolean);
 }
 
-function hasRole(category: string, target: "Student" | "Employee" | "Teacher") {
+function hasRole(category: string, target: SupportedRole) {
   return parseProfileCategories(category).some((item) => item.toLowerCase() === target.toLowerCase());
 }
 
-function isSupportedRole(role: string): role is "Student" | "Employee" | "Teacher" {
-  return role === "Student" || role === "Employee" || role === "Teacher";
+function buildDerivedRoleProfiles(profile: {
+  category: string;
+  mainGoal: string;
+  focusPreference: string;
+  availability: string;
+}): RoleProfileSnapshot[] {
+  return parseProfileCategories(profile.category)
+    .filter(isSupportedRole)
+    .map((role) => ({
+      id: `derived-${role.toLowerCase()}`,
+      role,
+      mainGoal: profile.mainGoal,
+      focusPreference: profile.focusPreference,
+      availability: profile.availability,
+      isDerived: true,
+    }));
 }
 
-function defaultEmployeeTemplateTasks(): Array<Omit<TaskRecord, "id">> {
+function buildRoleProfileMap(roleProfiles: RoleProfileSnapshot[]) {
+  return new Map(roleProfiles.map((roleProfile) => [roleProfile.id, roleProfile.role] as const));
+}
+
+function buildEffectiveProfile(
+  accountProfile: DashboardData["accountProfile"],
+  roleProfiles: RoleProfileSnapshot[],
+  activeRole: ActiveRole,
+): DashboardData["profile"] {
+  if (activeRole === "all") {
+    return accountProfile;
+  }
+
+  const roleProfile = roleProfiles.find((item) => item.role === activeRole);
+  if (!roleProfile) {
+    return accountProfile;
+  }
+
+  return {
+    fullName: accountProfile.fullName,
+    category: roleProfile.role,
+    mainGoal: roleProfile.mainGoal,
+    focusPreference: roleProfile.focusPreference,
+    availability: roleProfile.availability,
+    activeRole,
+  };
+}
+
+function inferLegacyTaskRoles(task: TaskRecord): SupportedRole[] {
+  const matches: SupportedRole[] = [];
+
+  if (roleKeywordBoost(task, "Student") > 0) {
+    matches.push("Student");
+  }
+
+  if (roleKeywordBoost(task, "Employee") > 0) {
+    matches.push("Employee");
+  }
+
+  if (roleKeywordBoost(task, "Teacher") > 0) {
+    matches.push("Teacher");
+  }
+
+  return matches;
+}
+
+function resolveTaskRoles(task: TaskRecord, roleProfileMap: Map<string, SupportedRole>, selectedRoles: SupportedRole[]): SupportedRole[] {
+  if (task.role_profile_id) {
+    const ownedRole = roleProfileMap.get(task.role_profile_id);
+    return ownedRole ? [ownedRole] : [];
+  }
+
+  if (task.task_lane === "shared") {
+    return selectedRoles;
+  }
+
+  if (task.task_lane === "general") {
+    return [];
+  }
+
+  return inferLegacyTaskRoles(task).filter((role) => selectedRoles.includes(role));
+}
+
+function filterTasksByActiveRole(
+  tasks: TaskRecord[],
+  activeRole: ActiveRole,
+  roleProfileMap: Map<string, SupportedRole>,
+  selectedRoles: SupportedRole[],
+) {
+  if (activeRole === "all") {
+    return tasks;
+  }
+
+  return tasks.filter((task) => resolveTaskRoles(task, roleProfileMap, selectedRoles).includes(activeRole));
+}
+
+function defaultEmployeeTemplateTasks(): StarterTaskSeed[] {
   return [
     {
       title: "Finish launch review summary",
@@ -192,7 +321,7 @@ function defaultEmployeeTemplateTasks(): Array<Omit<TaskRecord, "id">> {
   ];
 }
 
-function goalAwareEmployeeTasks(mainGoal?: string): Array<Omit<TaskRecord, "id">> {
+function goalAwareEmployeeTasks(mainGoal?: string): StarterTaskSeed[] {
   if (!mainGoal || mainGoal.trim().length < 8) {
     return defaultEmployeeTemplateTasks();
   }
@@ -241,7 +370,7 @@ function isoDatePlus(daysAhead: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function starterTasksForRole(category: string, mainGoal?: string): Array<Omit<TaskRecord, "id">> {
+function starterTasksForRole(category: string, mainGoal?: string): StarterTaskSeed[] {
   if (category === "Student") {
     return [
       {
@@ -309,7 +438,7 @@ function starterTasksForRole(category: string, mainGoal?: string): Array<Omit<Ta
   return goalAwareEmployeeTasks(mainGoal);
 }
 
-export function starterTasks(category: string, mainGoal?: string): Array<Omit<TaskRecord, "id">> {
+export function starterTasks(category: string, mainGoal?: string): StarterTaskSeed[] {
   const roles = parseProfileCategories(category);
 
   if (roles.length <= 1) {
@@ -317,7 +446,7 @@ export function starterTasks(category: string, mainGoal?: string): Array<Omit<Ta
   }
 
   const perRoleTasks = roles.map((role) => starterTasksForRole(role, mainGoal));
-  const blended: Array<Omit<TaskRecord, "id">> = [];
+  const blended: StarterTaskSeed[] = [];
   const seen = new Set<string>();
 
   for (let index = 0; index < 3; index++) {
@@ -338,6 +467,9 @@ function fallbackTasks(category: string, mainGoal?: string): TaskRecord[] {
   return starterTasks(category, mainGoal).map((task, index) => ({
     id: `demo-${category.toLowerCase()}-${index + 1}`,
     ...task,
+    role_profile_id: null,
+    task_lane: null,
+    resolved_role: null,
   }));
 }
 
@@ -409,30 +541,16 @@ function roleKeywordBoost(task: TaskRecord, role: "Student" | "Employee" | "Teac
   return /(lesson|class|grading|student prep|curriculum|worksheet|parent|classroom)/.test(text) ? 3 : 0;
 }
 
-function inferTaskRoles(task: TaskRecord): Array<"Student" | "Employee" | "Teacher"> {
-  const matches: Array<"Student" | "Employee" | "Teacher"> = [];
-
-  if (roleKeywordBoost(task, "Student") > 0) {
-    matches.push("Student");
-  }
-
-  if (roleKeywordBoost(task, "Employee") > 0) {
-    matches.push("Employee");
-  }
-
-  if (roleKeywordBoost(task, "Teacher") > 0) {
-    matches.push("Teacher");
-  }
-
-  return matches;
-}
-
 function buildRolePlans(
-  profile: DashboardData["profile"],
+  accountProfile: DashboardData["accountProfile"],
   tasks: TaskRecord[],
+  roleProfiles: RoleProfileSnapshot[],
+  activeRole: ActiveRole,
 ): Pick<DashboardData, "rolePlans" | "roleOverlaps"> {
-  const selectedRoles = parseProfileCategories(profile.category).filter(isSupportedRole);
+  const allSelectedRoles = parseProfileCategories(accountProfile.category).filter(isSupportedRole);
+  const selectedRoles = activeRole === "all" ? allSelectedRoles : allSelectedRoles.filter((role) => role === activeRole);
   const openTasks = tasks.filter((task) => task.status !== "completed");
+  const roleProfileMap = buildRoleProfileMap(roleProfiles);
 
   if (selectedRoles.length === 0) {
     return { rolePlans: [], roleOverlaps: [] };
@@ -440,11 +558,12 @@ function buildRolePlans(
 
   const rolePlans = selectedRoles.map((role) => {
     const matchingTasks = openTasks
-      .filter((task) => inferTaskRoles(task).includes(role))
+      .filter((task) => resolveTaskRoles(task, roleProfileMap, allSelectedRoles).includes(role))
       .sort((left, right) => scoreTask(right) + roleKeywordBoost(right, role) - (scoreTask(left) + roleKeywordBoost(left, role)))
       .slice(0, 3);
 
-    const roleSuggestions = starterTasksForRole(role, profile.mainGoal);
+    const roleProfile = roleProfiles.find((item) => item.role === role);
+    const roleSuggestions = starterTasksForRole(role, roleProfile?.mainGoal ?? accountProfile.mainGoal);
     const seenTitles = new Set(matchingTasks.map((task) => task.title.toLowerCase()));
     const suggestionTask =
       roleSuggestions.find((task) => !seenTitles.has(task.title.toLowerCase())) ?? roleSuggestions[0] ?? matchingTasks[0];
@@ -465,7 +584,7 @@ function buildRolePlans(
   const seenOverlapKeys = new Set<string>();
 
   for (const task of openTasks) {
-    const roles = inferTaskRoles(task).filter((role) => selectedRoles.includes(role));
+    const roles = resolveTaskRoles(task, roleProfileMap, allSelectedRoles).filter((role) => selectedRoles.includes(role));
     if (roles.length <= 1) {
       continue;
     }
@@ -916,21 +1035,32 @@ export function buildProfilePreview(profile: ProfileSnapshot, tasks?: TaskRecord
 export async function getDashboardData(supabase: SupabaseClient, user: User): Promise<DashboardData> {
   let setupHint: string | undefined;
 
-  const { data: profileData, error: profileError } = await supabase
+  let { data: profileData, error: profileError } = await supabase
     .from("profiles")
-    .select("full_name, category, main_goal, focus_preference, availability")
+    .select("full_name, category, main_goal, focus_preference, availability, active_role")
     .eq("user_id", user.id)
     .maybeSingle<ProfileRecord>();
 
+  if (isMissingColumnError(profileError, "active_role")) {
+    const fallbackProfileQuery = await supabase
+      .from("profiles")
+      .select("full_name, category, main_goal, focus_preference, availability")
+      .eq("user_id", user.id)
+      .maybeSingle<Omit<ProfileRecord, "active_role">>();
+
+    profileData = fallbackProfileQuery.data ? { ...fallbackProfileQuery.data, active_role: null } : null;
+    profileError = fallbackProfileQuery.error;
+  }
+
   let { data: taskData, error: taskError } = await supabase
     .from("tasks")
-    .select("id, title, description, due_date, estimated_minutes, priority, status, subject")
+    .select("id, title, description, due_date, estimated_minutes, priority, status, subject, role_profile_id, task_lane")
     .eq("user_id", user.id)
     .order("due_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .returns<TaskRecord[]>();
 
-  if (isMissingSubjectColumnError(taskError)) {
+  if (isMissingSubjectColumnError(taskError) || isMissingColumnError(taskError, "role_profile_id") || isMissingColumnError(taskError, "task_lane")) {
     const fallbackTaskQuery = await supabase
       .from("tasks")
       .select("id, title, description, due_date, estimated_minutes, priority, status")
@@ -939,48 +1069,135 @@ export async function getDashboardData(supabase: SupabaseClient, user: User): Pr
       .order("created_at", { ascending: false })
       .returns<Array<Omit<TaskRecord, "subject">>>();
 
-    taskData = fallbackTaskQuery.data?.map((task) => ({ ...task, subject: null })) as TaskRecord[] | null;
+    taskData = fallbackTaskQuery.data?.map((task) => ({
+      ...task,
+      subject: null,
+      role_profile_id: null,
+      task_lane: null,
+    })) as TaskRecord[] | null;
     taskError = fallbackTaskQuery.error;
   }
 
-  const profile = {
+  const accountProfile = {
     fullName: profileData?.full_name ?? user.user_metadata.full_name ?? user.email?.split("@")[0] ?? "there",
     category: profileData?.category ?? user.user_metadata.category ?? "User",
     mainGoal:
       profileData?.main_goal ?? user.user_metadata.main_goal ?? "Clarify this week's biggest outcome.",
     focusPreference: profileData?.focus_preference ?? "Three meaningful priorities",
     availability: profileData?.availability ?? "90 minutes",
+    activeRole: "all" as ActiveRole,
   };
+
+  const derivedRoleProfiles = buildDerivedRoleProfiles(accountProfile);
+  const availableRoles = derivedRoleProfiles.map((roleProfile) => roleProfile.role);
+  accountProfile.activeRole = normalizeActiveRole(profileData?.active_role, availableRoles);
+
+  let roleProfiles = derivedRoleProfiles;
+  const roleProfilesQuery = await supabase
+    .from("role_profiles")
+    .select("id, role, main_goal, focus_preference, availability")
+    .eq("user_id", user.id)
+    .order("role", { ascending: true })
+    .returns<RoleProfileRecord[]>();
+
+  if (!isMissingTableError(roleProfilesQuery.error, "role_profiles") && !roleProfilesQuery.error) {
+    const storedRoleProfiles = (roleProfilesQuery.data ?? [])
+      .flatMap((item) =>
+        isSupportedRole(item.role)
+          ? [
+              {
+                id: item.id,
+                role: item.role,
+                mainGoal: item.main_goal ?? accountProfile.mainGoal,
+                focusPreference: item.focus_preference ?? accountProfile.focusPreference,
+                availability: item.availability ?? accountProfile.availability,
+              },
+            ]
+          : [],
+      );
+
+    if (storedRoleProfiles.length > 0) {
+      roleProfiles = storedRoleProfiles;
+    } else if (availableRoles.length > 0) {
+      const seededRoleProfiles = await supabase
+        .from("role_profiles")
+        .upsert(
+          availableRoles.map((role) => ({
+            user_id: user.id,
+            role,
+            main_goal: accountProfile.mainGoal,
+            focus_preference: accountProfile.focusPreference,
+            availability: accountProfile.availability,
+          })),
+          { onConflict: "user_id,role" },
+        )
+        .select("id, role, main_goal, focus_preference, availability")
+        .returns<RoleProfileRecord[]>();
+
+      if (!seededRoleProfiles.error && seededRoleProfiles.data) {
+        roleProfiles = seededRoleProfiles.data
+          .flatMap((item) =>
+            isSupportedRole(item.role)
+              ? [
+                  {
+                    id: item.id,
+                    role: item.role,
+                    mainGoal: item.main_goal ?? accountProfile.mainGoal,
+                    focusPreference: item.focus_preference ?? accountProfile.focusPreference,
+                    availability: item.availability ?? accountProfile.availability,
+                  },
+                ]
+              : [],
+          );
+      }
+    }
+  }
+
+  accountProfile.activeRole = normalizeActiveRole(accountProfile.activeRole, roleProfiles.map((item) => item.role));
+  const profile = buildEffectiveProfile(accountProfile, roleProfiles, accountProfile.activeRole);
 
   if (!profileData && !profileError) {
     await supabase.from("profiles").upsert(
       {
         user_id: user.id,
-        full_name: profile.fullName,
-        category: profile.category,
-        main_goal: profile.mainGoal,
-        focus_preference: profile.focusPreference,
-        availability: profile.availability,
+        full_name: accountProfile.fullName,
+        category: accountProfile.category,
+        main_goal: accountProfile.mainGoal,
+        focus_preference: accountProfile.focusPreference,
+        availability: accountProfile.availability,
+        active_role: accountProfile.activeRole,
       },
       { onConflict: "user_id" },
     );
   }
 
-  let tasks = taskData ?? [];
+  let allTasks = taskData ?? [];
 
-  if (!taskError && tasks.length === 0) {
-    const seededTasks = starterTasks(profile.category, profile.mainGoal).map((task) => ({
-      user_id: user.id,
-      ...task,
-    }));
+  if (!taskError && allTasks.length === 0) {
+    const seededTasks =
+      roleProfiles.length > 0
+        ? roleProfiles.flatMap((roleProfile) =>
+            starterTasksForRole(roleProfile.role, roleProfile.mainGoal).map((task) => ({
+              user_id: user.id,
+              role_profile_id: roleProfile.id.startsWith("derived-") ? null : roleProfile.id,
+              task_lane: "role" as TaskLaneValue,
+              ...task,
+            })),
+          )
+        : starterTasks(accountProfile.category, accountProfile.mainGoal).map((task) => ({
+            user_id: user.id,
+            role_profile_id: null,
+            task_lane: "general" as TaskLaneValue,
+            ...task,
+          }));
 
     let { data: insertedTasks, error: insertError } = await supabase
       .from("tasks")
       .insert(seededTasks)
-      .select("id, title, description, due_date, estimated_minutes, priority, status, subject")
+      .select("id, title, description, due_date, estimated_minutes, priority, status, subject, role_profile_id, task_lane")
       .returns<TaskRecord[]>();
 
-    if (isMissingSubjectColumnError(insertError)) {
+    if (isMissingSubjectColumnError(insertError) || isMissingColumnError(insertError, "role_profile_id") || isMissingColumnError(insertError, "task_lane")) {
       const fallbackInsert = await supabase
         .from("tasks")
         .insert(seededTasks.map((task) => ({
@@ -995,19 +1212,24 @@ export async function getDashboardData(supabase: SupabaseClient, user: User): Pr
         .select("id, title, description, due_date, estimated_minutes, priority, status")
         .returns<Array<Omit<TaskRecord, "subject">>>();
 
-      insertedTasks = fallbackInsert.data?.map((task) => ({ ...task, subject: null })) as TaskRecord[] | null;
+      insertedTasks = fallbackInsert.data?.map((task) => ({
+        ...task,
+        subject: null,
+        role_profile_id: null,
+        task_lane: null,
+      })) as TaskRecord[] | null;
       insertError = fallbackInsert.error;
     }
 
     if (!insertError && insertedTasks?.length) {
-      tasks = insertedTasks;
+      allTasks = insertedTasks;
     }
   }
 
-  if (!taskError && shouldUpgradeTemplateTasks(tasks, profile)) {
+  if (!taskError && shouldUpgradeTemplateTasks(allTasks, profile)) {
     const personalizedTasks = starterTasks(profile.category, profile.mainGoal);
 
-    for (const [index, task] of tasks.entries()) {
+    for (const [index, task] of allTasks.entries()) {
       const replacement = personalizedTasks[index];
       if (!replacement) {
         continue;
@@ -1026,7 +1248,7 @@ export async function getDashboardData(supabase: SupabaseClient, user: User): Pr
         .eq("user_id", user.id);
 
       if (!updateError) {
-        tasks[index] = {
+        allTasks[index] = {
           ...task,
           ...replacement,
           id: task.id,
@@ -1035,17 +1257,27 @@ export async function getDashboardData(supabase: SupabaseClient, user: User): Pr
     }
   }
 
-  if ((profileError || taskError) && tasks.length === 0) {
+  if ((profileError || taskError) && allTasks.length === 0) {
     setupHint = "Run Docs/supabase-schema.sql in Supabase to unlock saved profiles and tasks.";
-    tasks = fallbackTasks(profile.category, profile.mainGoal);
+    allTasks = fallbackTasks(profile.category, profile.mainGoal);
   }
+
+  const roleProfileMap = buildRoleProfileMap(roleProfiles);
+  const tasks = filterTasksByActiveRole(allTasks, accountProfile.activeRole, roleProfileMap, availableRoles).map((task) => ({
+    ...task,
+    resolved_role: resolveTaskRoles(task, roleProfileMap, availableRoles)[0] ?? null,
+  }));
 
   const preview = buildProfilePreview(profile, tasks);
   const progress = buildProgress(profile, tasks);
-  const { rolePlans, roleOverlaps } = buildRolePlans(profile, tasks);
+  const { rolePlans, roleOverlaps } = buildRolePlans(accountProfile, allTasks, roleProfiles, accountProfile.activeRole);
 
   return {
     profile,
+    accountProfile,
+    activeRole: accountProfile.activeRole,
+    availableRoles,
+    roleProfiles,
     tasks,
     progress,
     groupedTasks: buildGroupedTasks(tasks),

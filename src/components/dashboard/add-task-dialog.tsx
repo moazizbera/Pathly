@@ -6,6 +6,7 @@ import type { MouseEventHandler, ReactElement, ReactNode } from "react";
 
 import { createTask, type TaskActionState } from "@/app/actions/dashboard";
 import { Dialog } from "@/components/ui/dialog";
+import type { ActiveRole, SupportedRole } from "@/lib/role-context";
 
 const initialState: TaskActionState = {};
 
@@ -13,12 +14,16 @@ interface AddTaskDialogProps {
   defaultDueDate?: string;
   title?: string;
   trigger?: ReactNode;
+  activeRole?: ActiveRole;
+  availableRoles?: SupportedRole[];
 }
 
 export function AddTaskDialog({
   defaultDueDate,
   title = "New priority",
   trigger,
+  activeRole = "all",
+  availableRoles = [],
 }: AddTaskDialogProps = {}) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(createTask, initialState);
@@ -36,6 +41,12 @@ export function AddTaskDialog({
     event.preventDefault();
     setOpen(true);
   };
+
+  const defaultTaskContext = activeRole !== "all"
+    ? `role:${activeRole}`
+    : availableRoles.length === 1
+      ? `role:${availableRoles[0]}`
+      : "general";
 
   return (
     <>
@@ -134,6 +145,25 @@ export function AddTaskDialog({
                 </select>
               </label>
             </div>
+
+            {availableRoles.length > 0 ? (
+              <label className="block text-xs font-medium text-slate-400">
+                Task context
+                <select
+                  name="taskContext"
+                  defaultValue={defaultTaskContext}
+                  className="mt-1.5 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
+                >
+                  {availableRoles.map((role) => (
+                    <option key={role} value={`role:${role}`}>
+                      {role}
+                    </option>
+                  ))}
+                  {availableRoles.length > 1 ? <option value="shared">Shared across roles</option> : null}
+                  <option value="general">General</option>
+                </select>
+              </label>
+            ) : null}
 
             {formState.error ? <p className="text-xs text-red-400">{formState.error}</p> : null}
 

@@ -9,6 +9,7 @@ import { AddTaskDialog } from "@/components/dashboard/add-task-dialog";
 import { AISuggestTasksDialog } from "@/components/dashboard/ai-suggest-tasks-dialog";
 import { AgentActionsPanel } from "@/components/dashboard/agent-actions-panel";
 import { IdeasPad } from "@/components/dashboard/ideas-pad";
+import { RoleSwitcher } from "@/components/dashboard/role-switcher";
 import { RolePlansPanel } from "@/components/dashboard/role-plans-panel";
 import { TaskResourcePanel } from "@/components/dashboard/task-resource-panel";
 import { TaskListPanel } from "@/components/dashboard/task-list-panel";
@@ -18,6 +19,7 @@ import { WeekCalendar } from "@/components/dashboard/week-calendar";
 import { LiveClock } from "@/components/dashboard/live-clock";
 import { AIChat } from "@/components/dashboard/ai-chat";
 import type { TaskRecord } from "@/lib/dashboard-data";
+import type { ActiveRole, SupportedRole } from "@/lib/role-context";
 
 interface DashboardWrapperProps {
   user: { id: string; email?: string };
@@ -27,7 +29,10 @@ interface DashboardWrapperProps {
     mainGoal: string;
     focusPreference: string;
     availability: string;
+    activeRole: ActiveRole;
   };
+  activeRole: ActiveRole;
+  availableRoles: SupportedRole[];
   progress: any;
   recommendation: any;
   mainObjective: any;
@@ -43,6 +48,8 @@ interface DashboardWrapperProps {
 export function DashboardWrapper({
   user,
   profile,
+  activeRole,
+  availableRoles,
   progress,
   recommendation,
   mainObjective,
@@ -112,6 +119,11 @@ export function DashboardWrapper({
               <div>
                 <p className="text-xs font-semibold tracking-[0.2em] text-cyan-300 uppercase">Execution cockpit</p>
                 <h1 className="mt-1 text-xl font-semibold text-slate-100">{profile.fullName.split(" ")[0]}&apos;s plan</h1>
+                <p className="mt-2 text-xs text-slate-500">
+                  {activeRole === "all"
+                    ? "All Roles dashboard: merged workload, overlaps, and total planning pressure."
+                    : `${activeRole} dashboard: focused tasks, recommendation, and calendar emphasis for this role.`}
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
@@ -143,6 +155,15 @@ export function DashboardWrapper({
                 </form>
               </div>
             </div>
+            {availableRoles.length > 0 ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-700/30 pt-4">
+                <div>
+                  <p className="text-[11px] font-semibold tracking-[0.18em] text-slate-500 uppercase">View context</p>
+                  <p className="mt-1 text-xs text-slate-400">Switch between a focused role dashboard and the aggregate executive view.</p>
+                </div>
+                <RoleSwitcher activeRole={activeRole} availableRoles={availableRoles} />
+              </div>
+            ) : null}
           </header>
 
           {/* ONE-TIME SHORTCUT HINT */}
@@ -240,7 +261,7 @@ export function DashboardWrapper({
             tasks={tasks}
           />
 
-          <RolePlansPanel rolePlans={rolePlans} roleOverlaps={roleOverlaps} />
+          <RolePlansPanel rolePlans={rolePlans} roleOverlaps={roleOverlaps} activeRole={activeRole} />
 
           {/* MAIN OBJECTIVE one clear card, no duplication */}
           <section className="animate-rise-in-soft rounded-3xl border border-cyan-500/30 bg-cyan-500/5 px-5 py-5">
@@ -299,6 +320,8 @@ export function DashboardWrapper({
             <WeekCalendar
               tasks={tasks}
               category={profile.category}
+              activeRole={activeRole}
+              availableRoles={availableRoles}
               rolePlans={rolePlans}
               weekOffset={calendarWeekOffset}
               onWeekOffsetChange={setCalendarWeekOffset}
@@ -375,6 +398,8 @@ export function DashboardWrapper({
             </div>
             <TaskListPanel
               tasks={tasks}
+              activeRole={activeRole}
+              availableRoles={availableRoles}
               rolePlans={rolePlans}
               profile={{ category: profile.category, mainGoal: profile.mainGoal }}
             />
@@ -411,7 +436,7 @@ export function DashboardWrapper({
 
           {/* ADD TASK + AI SUGGEST buttons */}
           <div className="grid grid-cols-2 gap-3">
-            <AddTaskDialog />
+            <AddTaskDialog activeRole={activeRole} availableRoles={availableRoles} />
             <button
               onClick={() => setSuggestDialogOpen(true)}
               className="w-full rounded-3xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-4 text-left text-xs font-semibold text-cyan-200 shadow-[0_0_22px_rgba(34,211,238,0.12)] transition-all hover:border-cyan-400/60 hover:bg-cyan-500/16 hover:text-cyan-100"
@@ -442,6 +467,7 @@ export function DashboardWrapper({
         }}
         userCategory={profile.category}
         mainGoal={profile.mainGoal}
+        activeRole={activeRole}
         existingTasks={tasks.map((t) => ({ title: t.title, subject: t.subject ?? undefined }))}
       />
 

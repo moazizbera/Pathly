@@ -8,11 +8,14 @@ import { AddTaskDialog } from "@/components/dashboard/add-task-dialog";
 import { EditTaskDialog } from "@/components/dashboard/edit-task-dialog";
 import { planLaneTone, planLaneTitle, type PlanLane } from "@/components/dashboard/plan-lanes";
 import type { DashboardData, TaskRecord } from "@/lib/dashboard-data";
+import type { ActiveRole, SupportedRole } from "@/lib/role-context";
 
 interface WeekCalendarProps {
   tasks: TaskRecord[];
   category?: string;
   rolePlans?: DashboardData["rolePlans"];
+  activeRole?: ActiveRole;
+  availableRoles?: SupportedRole[];
   weekOffset?: number;
   onWeekOffsetChange?: (weekOffset: number) => void;
   highlightedTaskTitles?: string[];
@@ -70,6 +73,8 @@ function formatRangeLabel(days: Date[]) {
 export function WeekCalendar({
   tasks,
   rolePlans = [],
+  activeRole = "all",
+  availableRoles = [],
   weekOffset: controlledWeekOffset,
   onWeekOffsetChange,
   highlightedTaskTitles = [],
@@ -377,6 +382,8 @@ export function WeekCalendar({
                   <AddTaskDialog
                     defaultDueDate={key}
                     title={`Add task for ${formatDay(day)} ${day.getDate()}`}
+                    activeRole={activeRole}
+                    availableRoles={availableRoles}
                     trigger={
                       <button
                         type="button"
@@ -397,6 +404,8 @@ export function WeekCalendar({
                     <AddTaskDialog
                       defaultDueDate={key}
                       title={`Add task for ${formatDay(day)} ${day.getDate()}`}
+                      activeRole={activeRole}
+                      availableRoles={availableRoles}
                       trigger={
                         <button
                           type="button"
@@ -417,6 +426,8 @@ export function WeekCalendar({
                       <EditTaskDialog
                         key={task.id}
                         task={task}
+                        activeRole={activeRole}
+                        availableRoles={availableRoles}
                         trigger={
                           <button
                             type="button"
@@ -488,6 +499,8 @@ export function WeekCalendar({
                 <EditTaskDialog
                   key={task.id}
                   task={task}
+                  activeRole={activeRole}
+                  availableRoles={availableRoles}
                   trigger={
                     <button
                       type="button"
@@ -522,6 +535,8 @@ export function WeekCalendar({
                 <EditTaskDialog
                   key={task.id}
                   task={task}
+                  activeRole={activeRole}
+                  availableRoles={availableRoles}
                   trigger={
                     <button
                       type="button"

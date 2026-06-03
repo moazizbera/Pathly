@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { isValidRoleCategory } from "@/lib/auth/schema";
+import { normalizeActiveRole, type ActiveRole, type SupportedRole, isSupportedRole } from "@/lib/role-context";
 import { getSupabaseSetupMessage, isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,6 +20,170 @@ export type ProfileActionState = {
 function isMissingSubjectColumnError(error: { code?: string; message?: string } | null | undefined) {
   const message = error?.message?.toLowerCase() ?? "";
   return message.includes("subject") && (message.includes("schema cache") || message.includes("column"));
+}
+
+function isMissingColumnError(error: { code?: string; message?: string } | null | undefined, column: string) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return message.includes(column.toLowerCase()) && (message.includes("schema cache") || message.includes("column"));
+}
+
+function isMissingTableError(error: { code?: string; message?: string } | null | undefined, table: string) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return error?.code === "42P01" || (message.includes(table.toLowerCase()) && message.includes("does not exist"));
+}
+
+function parseSelectedRoles(category: string): SupportedRole[] {
+  return category
+    .split(",")
+    .map((item) => item.trim())
+    .filter(isSupportedRole);
+}
+
+type BaseProfileContext = {
+  category: string;
+  mainGoal: string;
+  focusPreference: string;
+  availability: string;
+  activeRole: ActiveRole;
+};
+
+type RoleProfileContext = {
+  id: string;
+  role: SupportedRole;
+};
+
+async function getBaseProfileContext(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<BaseProfileContext> {
+  let { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("category, main_goal, focus_preference, availability, active_role")
+    .eq("user_id", userId)
+    .maybeSingle<{
+      category: string | null;
+      main_goal: string | null;
+      focus_preference: string | null;
+      availability: string | null;
+      active_role: string | null;
+    }>();
+
+  if (isMissingColumnError(profileError, "active_role")) {
+    const fallbackQuery = await supabase
+      .from("profiles")
+      .select("category, main_goal, focus_preference, availability")
+      .eq("user_id", userId)
+      .maybeSingle<{
+        category: string | null;
+        main_goal: string | null;
+        focus_preference: string | null;
+        availability: string | null;
+      }>();
+
+    profileData = fallbackQuery.data ? { ...fallbackQuery.data, active_role: null } : null;
+    profileError = fallbackQuery.error;
+  }
+
+  const category = profileData?.category ?? "Employee";
+  const roles = parseSelectedRoles(category);
+
+  return {
+    category,
+    mainGoal: profileData?.main_goal ?? "Clarify this week's biggest outcome.",
+    focusPreference: profileData?.focus_preference ?? "Three meaningful priorities",
+    availability: profileData?.availability ?? "90 minutes",
+    activeRole: normalizeActiveRole(profileData?.active_role, roles),
+  };
+}
+
+async function getRoleProfilesForUser(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  profile: BaseProfileContext,
+): Promise<RoleProfileContext[]> {
+  const selectedRoles = parseSelectedRoles(profile.category);
+  if (selectedRoles.length === 0) {
+    return [];
+  }
+
+  const roleProfilesQuery = await supabase
+    .from("role_profiles")
+    .select("id, role")
+    .eq("user_id", userId)
+    .returns<Array<{ id: string; role: string }>>();
+
+  if (isMissingTableError(roleProfilesQuery.error, "role_profiles")) {
+    return [];
+  }
+
+  if (roleProfilesQuery.error) {
+    throw new Error(roleProfilesQuery.error.message);
+  }
+
+  let roleProfiles = (roleProfilesQuery.data ?? [])
+    .flatMap((item) => (isSupportedRole(item.role) ? [{ id: item.id, role: item.role }] : []));
+
+  if (roleProfiles.length === 0) {
+    const seededRoleProfiles = await supabase
+      .from("role_profiles")
+      .upsert(
+        selectedRoles.map((role) => ({
+          user_id: userId,
+          role,
+          main_goal: profile.mainGoal,
+          focus_preference: profile.focusPreference,
+          availability: profile.availability,
+        })),
+        { onConflict: "user_id,role" },
+      )
+      .select("id, role")
+      .returns<Array<{ id: string; role: string }>>();
+
+    if (!seededRoleProfiles.error && seededRoleProfiles.data) {
+      roleProfiles = seededRoleProfiles.data
+        .flatMap((item) => (isSupportedRole(item.role) ? [{ id: item.id, role: item.role }] : []));
+    }
+  }
+
+  return roleProfiles;
+}
+
+async function resolveTaskRoleFields(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  formData: FormData,
+): Promise<{ role_profile_id: string | null; task_lane: "role" | "shared" | "general" }> {
+  const profile = await getBaseProfileContext(supabase, userId);
+  const roleProfiles = await getRoleProfilesForUser(supabase, userId, profile);
+  const selectedRoles = roleProfiles.map((item) => item.role);
+
+  const requestedContext = String(formData.get("taskContext") ?? "").trim();
+  const requestedRole = requestedContext.startsWith("role:")
+    ? requestedContext.slice("role:".length).trim()
+    : String(formData.get("roleContext") ?? "").trim();
+  const requestedLane = requestedContext === "shared" || requestedContext === "general"
+    ? requestedContext
+    : String(formData.get("taskLane") ?? "").trim();
+  const defaultRole = profile.activeRole === "all" ? null : profile.activeRole;
+  const chosenRole = isSupportedRole(requestedRole)
+    ? requestedRole
+    : defaultRole && selectedRoles.includes(defaultRole)
+      ? defaultRole
+      : null;
+
+  if (requestedLane === "shared") {
+    return { role_profile_id: null, task_lane: "shared" };
+  }
+
+  if (requestedLane === "general") {
+    return { role_profile_id: null, task_lane: "general" };
+  }
+
+  if (chosenRole) {
+    return {
+      role_profile_id: roleProfiles.find((item) => item.role === chosenRole)?.id ?? null,
+      task_lane: "role",
+    };
+  }
+
+  return { role_profile_id: null, task_lane: "general" };
 }
 
 export async function createTask(
@@ -49,6 +214,8 @@ export async function createTask(
     return { error: "You need to be signed in to create a task." };
   }
 
+  const roleFields = await resolveTaskRoleFields(supabase, user.id, formData);
+
   const taskPayload = {
     user_id: user.id,
     title,
@@ -58,11 +225,13 @@ export async function createTask(
     priority: ["high", "medium", "low"].includes(priority) ? priority : "medium",
     status: "todo",
     subject: subject || null,
+    role_profile_id: roleFields.role_profile_id,
+    task_lane: roleFields.task_lane,
   };
 
   let { error } = await supabase.from("tasks").insert(taskPayload);
 
-  if (isMissingSubjectColumnError(error)) {
+  if (isMissingSubjectColumnError(error) || isMissingColumnError(error, "role_profile_id") || isMissingColumnError(error, "task_lane")) {
     ({ error } = await supabase.from("tasks").insert({
       user_id: user.id,
       title,
@@ -71,6 +240,7 @@ export async function createTask(
       estimated_minutes: Number.isFinite(estimatedMinutes) ? estimatedMinutes : 25,
       priority: ["high", "medium", "low"].includes(priority) ? priority : "medium",
       status: "todo",
+      subject: isMissingSubjectColumnError(error) ? undefined : subject || null,
     }));
   }
 
@@ -164,12 +334,16 @@ export async function updateTask(
     return { error: "You need to be signed in to update a task." };
   }
 
+  const roleFields = await resolveTaskRoleFields(supabase, user.id, formData);
+
   const baseUpdate = {
     title,
     description: description || null,
     due_date: dueDate || null,
     estimated_minutes: Number.isFinite(estimatedMinutes) ? estimatedMinutes : 25,
     priority: ["high", "medium", "low"].includes(priority) ? priority : "medium",
+    role_profile_id: roleFields.role_profile_id,
+    task_lane: roleFields.task_lane,
   };
 
   let { error } = await supabase
@@ -181,10 +355,16 @@ export async function updateTask(
     .eq("id", taskId)
     .eq("user_id", user.id);
 
-  if (isMissingSubjectColumnError(error)) {
+  if (isMissingSubjectColumnError(error) || isMissingColumnError(error, "role_profile_id") || isMissingColumnError(error, "task_lane")) {
     ({ error } = await supabase
       .from("tasks")
-      .update(baseUpdate)
+      .update({
+        title: baseUpdate.title,
+        description: baseUpdate.description,
+        due_date: baseUpdate.due_date,
+        estimated_minutes: baseUpdate.estimated_minutes,
+        priority: baseUpdate.priority,
+      })
       .eq("id", taskId)
       .eq("user_id", user.id));
   }
@@ -291,6 +471,7 @@ export async function updateProfile(
     selectedCategories.length > 0
       ? selectedCategories.join(",")
       : String(formData.get("category") ?? "").trim();
+  const requestedActiveRole = String(formData.get("activeRole") ?? "all").trim();
   const mainGoal = String(formData.get("mainGoal") ?? "").trim();
   const focusPreference = String(formData.get("focusPreference") ?? "").trim();
   const availability = String(formData.get("availability") ?? "").trim();
@@ -303,6 +484,9 @@ export async function updateProfile(
     return { error: "Choose at least one valid role category." };
   }
 
+  const normalizedRoles = parseSelectedRoles(category);
+  const activeRole = normalizeActiveRole(requestedActiveRole, normalizedRoles);
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -312,7 +496,7 @@ export async function updateProfile(
     return { error: "You need to be signed in to update your profile." };
   }
 
-  const { error } = await supabase.from("profiles").upsert(
+  let { error } = await supabase.from("profiles").upsert(
     {
       user_id: user.id,
       full_name: fullName,
@@ -320,9 +504,24 @@ export async function updateProfile(
       main_goal: mainGoal || null,
       focus_preference: focusPreference || "Three meaningful priorities",
       availability: availability || "90 minutes",
+      active_role: activeRole,
     },
     { onConflict: "user_id" },
   );
+
+  if (isMissingColumnError(error, "active_role")) {
+    ({ error } = await supabase.from("profiles").upsert(
+      {
+        user_id: user.id,
+        full_name: fullName,
+        category,
+        main_goal: mainGoal || null,
+        focus_preference: focusPreference || "Three meaningful priorities",
+        availability: availability || "90 minutes",
+      },
+      { onConflict: "user_id" },
+    ));
+  }
 
   if (error) {
     return {
@@ -341,9 +540,62 @@ export async function updateProfile(
     },
   });
 
+  const roleProfilesQuery = await supabase.from("role_profiles").select("id, role").eq("user_id", user.id);
+  if (!isMissingTableError(roleProfilesQuery.error, "role_profiles") && !roleProfilesQuery.error) {
+    const rolePayload = normalizedRoles.map((role) => ({
+      user_id: user.id,
+      role,
+      main_goal: String(formData.get(`roleMainGoal_${role}`) ?? mainGoal).trim() || mainGoal || null,
+      focus_preference:
+        String(formData.get(`roleFocusPreference_${role}`) ?? focusPreference).trim() || focusPreference || "Three meaningful priorities",
+      availability: String(formData.get(`roleAvailability_${role}`) ?? availability).trim() || availability || "90 minutes",
+    }));
+
+    if (rolePayload.length > 0) {
+      await supabase.from("role_profiles").upsert(rolePayload, { onConflict: "user_id,role" });
+    }
+
+    const staleRoles = (roleProfilesQuery.data ?? [])
+      .filter((item) => isSupportedRole(item.role) && !normalizedRoles.includes(item.role));
+
+    if (staleRoles.length > 0) {
+      await supabase.from("role_profiles").delete().eq("user_id", user.id).in("role", staleRoles.map((item) => item.role));
+    }
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/profile");
   return { success: "Profile updated. Pathly will adapt your dashboard to the new context." };
+}
+
+export async function setActiveRole(activeRole: ActiveRole): Promise<void> {
+  if (!(await isSupabaseConfiguredAsync())) {
+    return;
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return;
+  }
+
+  const profile = await getBaseProfileContext(supabase, user.id);
+  const normalized = normalizeActiveRole(activeRole, parseSelectedRoles(profile.category));
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ active_role: normalized })
+    .eq("user_id", user.id);
+
+  if (isMissingColumnError(error, "active_role")) {
+    return;
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/profile");
 }
 
 export type SuggestedTask = {

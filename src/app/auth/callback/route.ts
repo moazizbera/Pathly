@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { parseRoleCategories } from "@/lib/auth/schema";
 import { starterTasks } from "@/lib/dashboard-data";
+import { isSupportedRole } from "@/lib/role-context";
 import { getSupabaseSetupMessage, isSupabaseConfiguredAsync } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
@@ -35,22 +37,63 @@ export async function GET(request: Request) {
         const category: string = meta.category ?? "Employee";
         const mainGoal: string = meta.main_goal ?? "Clarify this week's biggest outcome.";
 
-        const { error: profileError } = await supabase.from("profiles").insert({
+        let { error: profileError } = await supabase.from("profiles").insert({
           user_id: user.id,
           full_name: fullName,
           category,
           main_goal: mainGoal,
           focus_preference: "Three meaningful priorities",
           availability: "90 minutes",
+          active_role: "all",
         });
 
+        if (profileError?.message?.toLowerCase().includes("active_role")) {
+          ({ error: profileError } = await supabase.from("profiles").insert({
+            user_id: user.id,
+            full_name: fullName,
+            category,
+            main_goal: mainGoal,
+            focus_preference: "Three meaningful priorities",
+            availability: "90 minutes",
+          }));
+        }
+
         if (!profileError) {
-          await supabase.from("tasks").insert(
-            starterTasks(category).map((task) => ({
-              user_id: user.id,
-              ...task,
-            })),
-          );
+          const selectedRoles = parseRoleCategories(category).filter(isSupportedRole);
+          const seededRoleProfiles = await supabase
+            .from("role_profiles")
+            .upsert(
+              selectedRoles.map((role) => ({
+                user_id: user.id,
+                role,
+                main_goal: mainGoal,
+                focus_preference: "Three meaningful priorities",
+                availability: "90 minutes",
+              })),
+              { onConflict: "user_id,role" },
+            )
+            .select("id, role")
+            .returns<Array<{ id: string; role: string }>>();
+
+          if (!seededRoleProfiles.error && seededRoleProfiles.data && seededRoleProfiles.data.length > 0) {
+            await supabase.from("tasks").insert(
+              seededRoleProfiles.data.flatMap((roleProfile) =>
+                starterTasks(roleProfile.role, mainGoal).map((task) => ({
+                  user_id: user.id,
+                  role_profile_id: roleProfile.id,
+                  task_lane: "role",
+                  ...task,
+                })),
+              ),
+            );
+          } else {
+            await supabase.from("tasks").insert(
+              starterTasks(category, mainGoal).map((task) => ({
+                user_id: user.id,
+                ...task,
+              })),
+            );
+          }
         }
       }
 

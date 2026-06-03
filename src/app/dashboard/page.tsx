@@ -42,12 +42,28 @@ async function DashboardContent() {
   }
 
   const dashboardData = await getDashboardData(supabase, user);
-  const { profile, progress, recommendation, mainObjective, agenda, aiRole, aiBrief, tasks, rolePlans, roleOverlaps, setupHint } = dashboardData;
+  const {
+    profile,
+    activeRole,
+    availableRoles,
+    progress,
+    recommendation,
+    mainObjective,
+    agenda,
+    aiRole,
+    aiBrief,
+    tasks,
+    rolePlans,
+    roleOverlaps,
+    setupHint,
+  } = dashboardData;
 
   return (
     <DashboardWrapper 
       user={user}
       profile={profile} 
+      activeRole={activeRole}
+      availableRoles={availableRoles}
       progress={progress}
       recommendation={recommendation}
       mainObjective={mainObjective}

@@ -74,7 +74,12 @@ async function ProfileContent() {
           </div>
         </section>
 
-        <ProfilePageTabs profile={dashboardData.profile} recommendation={dashboardData.recommendation} />
+        <ProfilePageTabs
+          profile={dashboardData.accountProfile}
+          roleProfiles={dashboardData.roleProfiles}
+          availableRoles={dashboardData.availableRoles}
+          recommendation={dashboardData.recommendation}
+        />
       </div>
     </main>
   );

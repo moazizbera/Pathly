@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { suggestTasksForNextWeek, createTask, type SuggestedTask } from "@/app/actions/dashboard";
 import { planLaneTitle, planLaneTone, rolesToPlanLane, type PlanLane } from "@/components/dashboard/plan-lanes";
+import type { ActiveRole } from "@/lib/role-context";
 
 interface AISuggestTasksDialogProps {
   open: boolean;
@@ -12,6 +13,7 @@ interface AISuggestTasksDialogProps {
   onTasksAdded?: (payload: { count: number; titles: string[] }) => void;
   userCategory?: string;
   mainGoal?: string;
+  activeRole?: ActiveRole;
   existingTasks?: Array<{ title: string; subject?: string }>;
 }
 
@@ -21,6 +23,7 @@ export function AISuggestTasksDialog({
   onTasksAdded,
   userCategory,
   mainGoal,
+  activeRole,
   existingTasks = [],
 }: AISuggestTasksDialogProps) {
   const router = useRouter();
@@ -149,6 +152,15 @@ export function AISuggestTasksDialog({
         formData.append("dueDate", dateString);
         formData.append("estimatedMinutes", String(task.estimatedMinutes));
         formData.append("priority", task.priority);
+        if (task.roles && task.roles.length === 1) {
+          formData.append("taskContext", `role:${task.roles[0]}`);
+        } else if ((task.roles?.length ?? 0) > 1) {
+          formData.append("taskContext", "shared");
+        } else if (activeRole && activeRole !== "all") {
+          formData.append("taskContext", `role:${activeRole}`);
+        } else {
+          formData.append("taskContext", "general");
+        }
         if (task.subject) {
           formData.append("subject", task.subject);
         }

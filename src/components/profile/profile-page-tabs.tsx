@@ -7,13 +7,15 @@ import type { DashboardData, ProfileSnapshot } from "@/lib/dashboard-data";
 
 type ProfilePageTabsProps = {
   profile: ProfileSnapshot;
+  roleProfiles: DashboardData["roleProfiles"];
+  availableRoles: DashboardData["availableRoles"];
   recommendation: DashboardData["recommendation"];
 };
 
 const tabButtonBase =
   "rounded-full border px-4 py-2 text-sm font-semibold transition-all";
 
-export function ProfilePageTabs({ profile, recommendation }: ProfilePageTabsProps) {
+export function ProfilePageTabs({ profile, roleProfiles, availableRoles, recommendation }: ProfilePageTabsProps) {
   const [activeTab, setActiveTab] = useState<"update" | "guide">("update");
 
   return (
@@ -59,7 +61,7 @@ export function ProfilePageTabs({ profile, recommendation }: ProfilePageTabsProp
 
       {activeTab === "update" ? (
         <div className="mt-6">
-          <ProfileForm profile={profile} showPreview={false} />
+          <ProfileForm profile={profile} roleProfiles={roleProfiles} availableRoles={availableRoles} showPreview={false} />
         </div>
       ) : (
         <div className="mt-6 space-y-5">

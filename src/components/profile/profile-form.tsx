@@ -6,15 +6,18 @@ import { updateProfile, type ProfileActionState } from "@/app/actions/dashboard"
 import { AuthSubmitButton } from "@/components/auth/auth-submit-button";
 import { categoryOptions } from "@/lib/auth/schema";
 import { buildProfilePreview, type ProfileSnapshot } from "@/lib/dashboard-data";
+import type { RoleProfileSnapshot, SupportedRole } from "@/lib/role-context";
 
 type ProfileFormProps = {
   profile: ProfileSnapshot;
+  roleProfiles?: RoleProfileSnapshot[];
+  availableRoles?: SupportedRole[];
   showPreview?: boolean;
 };
 
 const initialState: ProfileActionState = {};
 
-export function ProfileForm({ profile, showPreview = true }: ProfileFormProps) {
+export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], showPreview = true }: ProfileFormProps) {
   const [state, action] = useActionState(updateProfile, initialState);
   const formState = state ?? initialState;
   const [draftProfile, setDraftProfile] = useState(profile);
@@ -135,6 +138,78 @@ export function ProfileForm({ profile, showPreview = true }: ProfileFormProps) {
           className="mt-1.5 min-h-28 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
         />
       </label>
+
+      {availableRoles.length > 0 ? (
+        <section className="rounded-4xl border border-slate-700/30 bg-slate-900/40 p-5 sm:p-6">
+          <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-semibold tracking-[0.18em] text-cyan-400 uppercase">Default dashboard role</p>
+                <p className="mt-2 text-sm leading-7 text-slate-400">Choose whether Pathly should open in a focused role dashboard or in the merged All Roles view.</p>
+              </div>
+              <label className="block text-xs font-medium text-slate-400">
+                Default active role
+                <select
+                  name="activeRole"
+                  defaultValue={profile.activeRole}
+                  className="mt-1.5 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
+                >
+                  <option value="all">All Roles</option>
+                  {availableRoles.map((role) => (
+                    <option key={role} value={role}>{role}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-semibold tracking-[0.18em] text-cyan-400 uppercase">Role contexts</p>
+                <p className="mt-2 text-sm leading-7 text-slate-400">Each role keeps its own goal, focus preference, and availability so recommendations do not collapse into one blended profile.</p>
+              </div>
+              <div className="space-y-4">
+                {availableRoles.map((role) => {
+                  const roleProfile = roleProfiles.find((item) => item.role === role);
+
+                  return (
+                    <article key={role} className="rounded-3xl border border-slate-700/40 bg-slate-800/30 p-4">
+                      <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">{role}</p>
+                      <div className="mt-3 grid gap-3">
+                        <label className="text-xs font-medium text-slate-400">
+                          Role goal
+                          <textarea
+                            name={`roleMainGoal_${role}`}
+                            defaultValue={roleProfile?.mainGoal ?? profile.mainGoal}
+                            className="mt-1.5 min-h-20 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
+                          />
+                        </label>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <label className="text-xs font-medium text-slate-400">
+                            Focus preference
+                            <input
+                              name={`roleFocusPreference_${role}`}
+                              defaultValue={roleProfile?.focusPreference ?? profile.focusPreference}
+                              className="mt-1.5 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
+                            />
+                          </label>
+                          <label className="text-xs font-medium text-slate-400">
+                            Availability
+                            <input
+                              name={`roleAvailability_${role}`}
+                              defaultValue={roleProfile?.availability ?? profile.availability}
+                              className="mt-1.5 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {showPreview ? (
       <section className="rounded-4xl border border-slate-700/30 bg-slate-900/40 p-5 sm:p-6">

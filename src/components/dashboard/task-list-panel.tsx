@@ -9,6 +9,7 @@ import { EditTaskDialog } from "@/components/dashboard/edit-task-dialog";
 import { TaskHelpButton, type TaskSupportProfile } from "@/components/dashboard/task-resource-panel";
 import { planLaneTitle, planLaneTone, type PlanLane } from "@/components/dashboard/plan-lanes";
 import type { DashboardData, TaskRecord } from "@/lib/dashboard-data";
+import type { ActiveRole, SupportedRole } from "@/lib/role-context";
 
 function PriorityChip({ priority }: { priority: string }) {
   const cls =
@@ -24,7 +25,7 @@ function PriorityChip({ priority }: { priority: string }) {
   );
 }
 
-function TaskRow({ task, profile }: { task: TaskRecord; profile: TaskSupportProfile }) {
+function TaskRow({ task, profile, activeRole, availableRoles }: { task: TaskRecord; profile: TaskSupportProfile; activeRole: ActiveRole; availableRoles: SupportedRole[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isInProgress = task.status === "in_progress";
@@ -80,6 +81,8 @@ function TaskRow({ task, profile }: { task: TaskRecord; profile: TaskSupportProf
 
       <EditTaskDialog
         task={task}
+        activeRole={activeRole}
+        availableRoles={availableRoles}
         trigger={
           <button
             type="button"
@@ -125,12 +128,14 @@ function TaskRow({ task, profile }: { task: TaskRecord; profile: TaskSupportProf
   );
 }
 
-function CompletedRow({ task, profile }: { task: TaskRecord; profile: TaskSupportProfile }) {
+function CompletedRow({ task, profile, activeRole, availableRoles }: { task: TaskRecord; profile: TaskSupportProfile; activeRole: ActiveRole; availableRoles: SupportedRole[] }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-emerald-500/15 bg-emerald-500/5 px-4 py-3 opacity-60 transition-opacity hover:opacity-80">
       <span className="shrink-0 text-xs text-emerald-400">✓</span>
       <EditTaskDialog
         task={task}
+        activeRole={activeRole}
+        availableRoles={availableRoles}
         trigger={
           <button
             type="button"
@@ -214,10 +219,14 @@ function groupTasksByRole(tasks: TaskRecord[], rolePlans: DashboardData["rolePla
 export function TaskListPanel({
   tasks,
   profile,
+  activeRole,
+  availableRoles,
   rolePlans,
 }: {
   tasks: TaskRecord[];
   profile: TaskSupportProfile;
+  activeRole: ActiveRole;
+  availableRoles: SupportedRole[];
   rolePlans: DashboardData["rolePlans"];
 }) {
   const [showAll, setShowAll] = useState(false);
@@ -246,7 +255,7 @@ export function TaskListPanel({
                 </span>
               </div>
               <div className="space-y-2">
-                {group.tasks.map((task) => <TaskRow key={task.id} task={task} profile={profile} />)}
+                {group.tasks.map((task) => <TaskRow key={task.id} task={task} profile={profile} activeRole={activeRole} availableRoles={availableRoles} />)}
               </div>
               {group.remaining > 0 ? (
                 <p className="mt-2 text-xs text-slate-500">+ {group.remaining} more in this lane</p>
@@ -292,7 +301,7 @@ export function TaskListPanel({
                   </span>
                 </div>
                 <div className="space-y-2">
-                  {group.tasks.map((task) => <TaskRow key={task.id} task={task} profile={profile} />)}
+                  {group.tasks.map((task) => <TaskRow key={task.id} task={task} profile={profile} activeRole={activeRole} availableRoles={availableRoles} />)}
                 </div>
               </section>
             ))
@@ -305,7 +314,7 @@ export function TaskListPanel({
               </p>
               <div className="space-y-2">
                 {done.map((task) => (
-                  <CompletedRow key={task.id} task={task} profile={profile} />
+                  <CompletedRow key={task.id} task={task} profile={profile} activeRole={activeRole} availableRoles={availableRoles} />
                 ))}
               </div>
             </div>
