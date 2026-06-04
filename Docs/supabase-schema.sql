@@ -29,6 +29,8 @@ create table if not exists public.role_profiles (
 create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
+  -- Keep the foreign key non-destructive for direct SQL deletes.
+  -- Pathly's profile update flow deletes role-owned tasks first when a role is removed.
   role_profile_id uuid references public.role_profiles(id) on delete set null,
   client_request_id text,
   title text not null,
@@ -48,6 +50,11 @@ alter table public.tasks add column if not exists subject text;
 alter table public.tasks add column if not exists role_profile_id uuid references public.role_profiles(id) on delete set null;
 alter table public.tasks add column if not exists task_lane text default 'general';
 alter table public.tasks add column if not exists client_request_id text;
+
+-- Important behavior note:
+-- When a user unchecks a role in Pathly profile settings, the app explicitly deletes
+-- tasks tied to that role_profile_id before deleting the role_profiles row.
+-- Shared and general tasks are preserved.
 
 create index if not exists tasks_user_id_idx on public.tasks(user_id);
 create index if not exists tasks_due_date_idx on public.tasks(due_date);

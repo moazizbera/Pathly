@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { updateProfile, type ProfileActionState } from "@/app/actions/dashboard";
 import { AuthSubmitButton } from "@/components/auth/auth-submit-button";
 import { categoryOptions } from "@/lib/auth/schema";
 import { buildProfilePreview, type ProfileSnapshot } from "@/lib/dashboard-data";
-import type { RoleProfileSnapshot, SupportedRole } from "@/lib/role-context";
+import { isSupportedRole, type RoleProfileSnapshot, type SupportedRole } from "@/lib/role-context";
 
 type ProfileFormProps = {
   profile: ProfileSnapshot;
@@ -21,6 +21,7 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
   const [state, action] = useActionState(updateProfile, initialState);
   const formState = state ?? initialState;
   const [draftProfile, setDraftProfile] = useState(profile);
+  const [confirmRoleRemoval, setConfirmRoleRemoval] = useState(false);
   const preview = buildProfilePreview(draftProfile);
 
   function updateDraftProfile<Key extends keyof ProfileSnapshot>(key: Key, value: ProfileSnapshot[Key]) {
@@ -34,6 +35,16 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+  const selectedRoles = selectedCategories.filter(isSupportedRole);
+  const removedRoles = availableRoles.filter((role) => !selectedRoles.includes(role));
+  const requiresRoleRemovalConfirmation = removedRoles.length > 0 && availableRoles.length > 1;
+  const activeRoleValue = draftProfile.activeRole === "all" || selectedRoles.includes(draftProfile.activeRole)
+    ? draftProfile.activeRole
+    : "all";
+
+  useEffect(() => {
+    setConfirmRoleRemoval(false);
+  }, [draftProfile.category]);
 
   function toggleCategory(category: string, checked: boolean) {
     const next = checked
@@ -43,14 +54,14 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
   }
 
   return (
-    <form action={action} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-4">
+    <form action={action} className="space-y-3">
+      <div className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="space-y-3">
           <div className="rounded-3xl border border-slate-700/40 bg-slate-800/25 p-4 text-xs font-medium text-slate-400">
             Roles
             <input type="hidden" name="category" value={draftProfile.category} />
             <p className="mt-1.5 text-[11px] tracking-[0.16em] text-slate-500 uppercase">Three roles only</p>
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
               {categoryOptions.map((category) => {
                 const isSelected = selectedCategories.includes(category);
 
@@ -60,16 +71,16 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
                     type="button"
                     onClick={() => toggleCategory(category, !isSelected)}
                     aria-pressed={isSelected}
-                    className={`w-full rounded-3xl border px-4 py-4 text-left transition-all ${
+                    className={`w-full rounded-3xl border px-3 py-3 text-left transition-all ${
                       isSelected
                         ? "border-cyan-400/60 bg-cyan-500/10 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]"
                         : "border-slate-700/50 bg-slate-800/40 text-slate-300 hover:border-slate-500/60 hover:bg-slate-800/55"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className={`text-base font-semibold ${isSelected ? "text-slate-50" : "text-slate-200"}`}>{category}</p>
-                        <p className="mt-1 text-sm leading-6 text-slate-400">
+                        <p className={`text-sm font-semibold ${isSelected ? "text-slate-50" : "text-slate-200"}`}>{category}</p>
+                        <p className="mt-1 text-xs leading-5 text-slate-400">
                           {category === "Student"
                             ? "Study and exams"
                             : category === "Employee"
@@ -91,12 +102,33 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
                 );
               })}
             </div>
+            {requiresRoleRemovalConfirmation ? (
+              <div className="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100">
+                <p className="font-semibold uppercase tracking-[0.16em] text-amber-300">Role removal confirmation</p>
+                <p className="mt-2 leading-6 text-amber-100/90">
+                  Removing {removedRoles.join(", ")} will permanently delete that role profile and all role-owned tasks and agenda items tied to it.
+                </p>
+                <label className="mt-3 flex items-start gap-3 text-left text-xs text-amber-50">
+                  <input
+                    type="checkbox"
+                    name="confirmRoleRemoval"
+                    value="yes"
+                    checked={confirmRoleRemoval}
+                    onChange={(event) => setConfirmRoleRemoval(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-amber-400/50 bg-slate-900 text-cyan-400"
+                  />
+                  <span>I understand the unchecked role data will be deleted permanently.</span>
+                </label>
+              </div>
+            ) : null}
             {selectedCategories.map((category) => (
               <input key={category} type="hidden" name="categories" value={category} />
             ))}
           </div>
+        </div>
 
-          <label className="block text-xs font-medium text-slate-400">
+        <div className="grid gap-3 content-start sm:grid-cols-2 xl:grid-cols-1">
+          <label className="text-xs font-medium text-slate-400">
             Full name
             <input
               name="fullName"
@@ -105,9 +137,6 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
               className="mt-1.5 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
             />
           </label>
-        </div>
-
-        <div className="grid gap-4 content-start sm:grid-cols-1">
           <label className="text-xs font-medium text-slate-400">
             Focus preference
             <input
@@ -126,6 +155,20 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
               className="mt-1.5 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
             />
           </label>
+          <label className="text-xs font-medium text-slate-400 sm:col-span-2 xl:col-span-1">
+            Default active role
+            <select
+              name="activeRole"
+              value={activeRoleValue}
+              onChange={(event) => updateDraftProfile("activeRole", event.target.value as ProfileSnapshot["activeRole"])}
+              className="mt-1.5 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
+            >
+              <option value="all">All Roles</option>
+              {selectedRoles.map((role) => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
@@ -135,52 +178,33 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
           name="mainGoal"
           value={draftProfile.mainGoal}
           onChange={(event) => updateDraftProfile("mainGoal", event.target.value)}
-          className="mt-1.5 min-h-28 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
+          className="mt-1.5 min-h-24 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
         />
       </label>
 
-      {availableRoles.length > 0 ? (
-        <section className="rounded-4xl border border-slate-700/30 bg-slate-900/40 p-5 sm:p-6">
-          <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs font-semibold tracking-[0.18em] text-cyan-400 uppercase">Default dashboard role</p>
-                <p className="mt-2 text-sm leading-7 text-slate-400">Choose whether Pathly should open in a focused role dashboard or in the merged All Roles view.</p>
-              </div>
-              <label className="block text-xs font-medium text-slate-400">
-                Default active role
-                <select
-                  name="activeRole"
-                  defaultValue={profile.activeRole}
-                  className="mt-1.5 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
-                >
-                  <option value="all">All Roles</option>
-                  {availableRoles.map((role) => (
-                    <option key={role} value={role}>{role}</option>
-                  ))}
-                </select>
-              </label>
+      {selectedRoles.length > 0 ? (
+        <section className="rounded-4xl border border-slate-700/30 bg-slate-900/40 p-4 sm:p-5">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.18em] text-cyan-400 uppercase">Role contexts</p>
+              <p className="mt-1 text-sm leading-6 text-slate-400">Only the roles currently selected stay editable here. Unchecked roles disappear immediately and are deleted on save after confirmation.</p>
             </div>
-
-            <div className="space-y-4">
-              <div>
-                <p className="text-xs font-semibold tracking-[0.18em] text-cyan-400 uppercase">Role contexts</p>
-                <p className="mt-2 text-sm leading-7 text-slate-400">Each role keeps its own goal, focus preference, and availability so recommendations do not collapse into one blended profile.</p>
-              </div>
-              <div className="space-y-4">
-                {availableRoles.map((role) => {
+            <p className="text-xs text-slate-500">{selectedRoles.length} active role{selectedRoles.length === 1 ? "" : "s"}</p>
+          </div>
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {selectedRoles.map((role) => {
                   const roleProfile = roleProfiles.find((item) => item.role === role);
 
                   return (
-                    <article key={role} className="rounded-3xl border border-slate-700/40 bg-slate-800/30 p-4">
+                    <article key={role} className="rounded-3xl border border-slate-700/40 bg-slate-800/30 p-3.5">
                       <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase">{role}</p>
-                      <div className="mt-3 grid gap-3">
+                      <div className="mt-3 grid gap-2.5">
                         <label className="text-xs font-medium text-slate-400">
                           Role goal
                           <textarea
                             name={`roleMainGoal_${role}`}
                             defaultValue={roleProfile?.mainGoal ?? profile.mainGoal}
-                            className="mt-1.5 min-h-20 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
+                            className="mt-1.5 min-h-16 w-full rounded-2xl border border-slate-700/50 bg-slate-800/40 px-4 py-2.5 text-sm text-slate-100 outline-none transition-all focus:border-cyan-500/40 focus:bg-slate-800/60"
                           />
                         </label>
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -205,8 +229,6 @@ export function ProfileForm({ profile, roleProfiles = [], availableRoles = [], s
                     </article>
                   );
                 })}
-              </div>
-            </div>
           </div>
         </section>
       ) : null}

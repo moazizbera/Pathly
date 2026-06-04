@@ -599,6 +599,25 @@ export async function updateProfile(
     return { error: "You need to be signed in to update your profile." };
   }
 
+  const roleProfilesQuery = await supabase
+    .from("role_profiles")
+    .select("id, role")
+    .eq("user_id", user.id)
+    .returns<Array<{ id: string; role: string }>>();
+
+  const canManageRoleProfiles = !isMissingTableError(roleProfilesQuery.error, "role_profiles") && !roleProfilesQuery.error;
+  const staleRoles = canManageRoleProfiles
+    ? (roleProfilesQuery.data ?? []).filter((item) => isSupportedRole(item.role) && !normalizedRoles.includes(item.role))
+    : [];
+
+  const confirmRoleRemoval = String(formData.get("confirmRoleRemoval") ?? "").trim() === "yes";
+
+  if (staleRoles.length > 0 && !confirmRoleRemoval) {
+    return {
+      error: `Confirm removing ${staleRoles.map((item) => item.role).join(", ")} before saving. Pathly will delete that role's profile and role-owned tasks.`,
+    };
+  }
+
   let { error } = await supabase.from("profiles").upsert(
     {
       user_id: user.id,
@@ -643,8 +662,7 @@ export async function updateProfile(
     },
   });
 
-  const roleProfilesQuery = await supabase.from("role_profiles").select("id, role").eq("user_id", user.id);
-  if (!isMissingTableError(roleProfilesQuery.error, "role_profiles") && !roleProfilesQuery.error) {
+  if (canManageRoleProfiles) {
     const rolePayload = normalizedRoles.map((role) => ({
       user_id: user.id,
       role,
@@ -658,11 +676,44 @@ export async function updateProfile(
       await supabase.from("role_profiles").upsert(rolePayload, { onConflict: "user_id,role" });
     }
 
-    const staleRoles = (roleProfilesQuery.data ?? [])
-      .filter((item) => isSupportedRole(item.role) && !normalizedRoles.includes(item.role));
-
     if (staleRoles.length > 0) {
-      await supabase.from("role_profiles").delete().eq("user_id", user.id).in("role", staleRoles.map((item) => item.role));
+      const staleRoleIds = staleRoles.map((item) => item.id);
+
+      if (staleRoleIds.length > 0) {
+        const { error: deleteTaskError } = await supabase
+          .from("tasks")
+          .delete()
+          .eq("user_id", user.id)
+          .in("role_profile_id", staleRoleIds);
+
+        if (isMissingColumnError(deleteTaskError, "role_profile_id")) {
+          return { error: "Role cleanup needs the latest tasks schema. Run Docs/supabase-schema.sql in Supabase first." };
+        }
+
+        if (deleteTaskError && !isMissingTableError(deleteTaskError, "tasks")) {
+          return {
+            error:
+              deleteTaskError.code === "42P01"
+                ? "Tasks table not found. Run Docs/supabase-schema.sql in Supabase first."
+                : deleteTaskError.message,
+          };
+        }
+      }
+
+      const { error: deleteRoleError } = await supabase
+        .from("role_profiles")
+        .delete()
+        .eq("user_id", user.id)
+        .in("role", staleRoles.map((item) => item.role));
+
+      if (deleteRoleError) {
+        return {
+          error:
+            deleteRoleError.code === "42P01"
+              ? "Role profiles table not found. Run Docs/supabase-schema.sql in Supabase first."
+              : deleteRoleError.message,
+        };
+      }
     }
   }
 
