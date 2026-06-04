@@ -877,6 +877,22 @@ function suggestionMatchesFocusedRole(template: Pick<SuggestedTask, "title" | "d
   return /(enterprise|stakeholder|client|delivery|project|build|meeting|launch|review|milestone|risk)/.test(text);
 }
 
+function interleaveSuggestionGroups(groups: SuggestedTask[][]) {
+  const merged: SuggestedTask[] = [];
+  const maxLength = Math.max(0, ...groups.map((group) => group.length));
+
+  for (let index = 0; index < maxLength; index += 1) {
+    for (const group of groups) {
+      const item = group[index];
+      if (item) {
+        merged.push(item);
+      }
+    }
+  }
+
+  return merged;
+}
+
 export async function suggestTasksForNextWeek(
   userCategory?: string,
   mainGoal?: string,
@@ -1164,6 +1180,14 @@ export async function suggestTasksForNextWeek(
     ? [...focusedContextAwareTemplates, ...goalDrivenTemplates, ...subjectDrivenTemplates]
     : [...contextAwareTemplates, ...goalDrivenTemplates, ...subjectDrivenTemplates];
   const rotatedPersonalizedTemplates = rotateArray(personalizedTemplates, daySeed + contextSeed);
+  const groupedAllRoleTemplates = selectedRoles.map((role) =>
+    rotateArray(
+      rotatedPersonalizedTemplates.filter((template) => template.roles?.length === 1 && template.roles[0] === role),
+      daySeed + contextSeed,
+    ),
+  );
+  const interleavedAllRoleTemplates = interleaveSuggestionGroups(groupedAllRoleTemplates);
+  const generalAllRoleTemplates = rotatedPersonalizedTemplates.filter((template) => !template.roles || template.roles.length === 0);
   const rotatedTemplates = focusedRole
     ? [
         ...rotatedPersonalizedTemplates,
@@ -1172,8 +1196,9 @@ export async function suggestTasksForNextWeek(
         ...focusedContextAwareTemplates,
       ]
     : [
+        ...interleavedAllRoleTemplates,
         ...priorityTemplates,
-        ...rotatedPersonalizedTemplates,
+        ...generalAllRoleTemplates,
       ];
 
   // Filter out duplicates with existing tasks
