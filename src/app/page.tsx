@@ -78,64 +78,77 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="animate-rise-in grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <section className="animate-rise-in space-y-6">
           <div className="glass-card rounded-4xl px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-14">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full badge-cyan px-4 py-2 text-xs font-semibold tracking-[0.24em] uppercase">
-              <span className="signal-dot" />
-              Design4Future 2026
-            </div>
-            <div className="max-w-3xl">
-              <p className="mb-4 text-sm font-semibold tracking-[0.24em] text-cyan-300 uppercase">
-                Future-ready execution operating system
-              </p>
-              <h1 className="font-display max-w-4xl text-5xl leading-[0.93] tracking-tight text-slate-100 sm:text-6xl lg:text-7xl">
-                One AI, one objective, zero wasted context-switches.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-400 sm:text-xl">
-                Pathly is the orchestration layer for multi-track execution. Students juggling exams and side projects.
-                Developers managing parallel projects across deadlines. Teachers planning while staying responsive.
-                <span className="block mt-3 text-cyan-300 font-medium">Your profile shapes the AI. Your AI shapes your day.</span>
-              </p>
-            </div>
-
-            <div className="mt-10 flex flex-wrap gap-3">
-              <Link
-                href={supabaseConfigured ? "/signup" : "/login"}
-                className="inline-flex items-center justify-center rounded-full bg-linear-to-r from-cyan-500 to-cyan-600 px-6 py-3 text-sm font-semibold text-[#0f0f1e] shadow-[0_0_24px_rgba(34,211,238,0.4)] transition-all duration-200 hover:shadow-[0_0_40px_rgba(34,211,238,0.6)]"
-              >
-                {supabaseConfigured ? "Get started" : "Sign in"}
-              </Link>
-              <Link
-                href="/demo"
-                className="inline-flex items-center justify-center rounded-full border-2 border-cyan-400/60 bg-cyan-500/20 px-6 py-3 text-sm font-semibold text-cyan-200 transition-all hover:border-cyan-300 hover:bg-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.25)]"
-              >
-                ✦ Watch 2-min demo
-              </Link>
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-6 py-3 text-sm font-semibold text-emerald-300 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/20"
-              >
-                Open dashboard
-              </Link>
-            </div>
-
-            <div className="mt-12 grid gap-4 sm:grid-cols-3">
-            <div className="hover-lift rounded-3xl border border-cyan-500/20 bg-cyan-500/5 p-5 backdrop-blur-sm transition-all hover:shadow-[0_0_24px_rgba(34,211,238,0.2)]">
-              <p className="text-4xl font-semibold text-cyan-300">∞</p>
-              <p className="mt-2 text-sm leading-7 text-slate-400">Subjects &amp; projects tracked in parallel without overlap</p>
+            <div className="flex flex-col gap-6">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full badge-cyan px-4 py-2 text-xs font-semibold tracking-[0.24em] uppercase">
+                <span className="signal-dot" />
+                Design4Future 2026
               </div>
-            <div className="hover-lift rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-5 backdrop-blur-sm transition-all hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]">
-              <p className="text-4xl font-semibold text-emerald-300">1</p>
-              <p className="mt-2 text-sm leading-7 text-slate-400">clear next action (AI-chosen) at the center of every day</p>
+
+              <div className="max-w-5xl">
+                <p className="mb-4 text-sm font-semibold tracking-[0.24em] text-cyan-300 uppercase">
+                  Future-ready execution operating system
+                </p>
+                <h1 className="font-display max-w-5xl text-5xl leading-[0.93] tracking-tight text-slate-100 sm:text-6xl lg:text-7xl">
+                  One AI, one objective, zero wasted context-switches.
+                </h1>
+                <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-400 sm:text-xl">
+                  Pathly is the orchestration layer for multi-track execution. Students juggling exams and side projects.
+                  Developers managing parallel projects across deadlines. Teachers planning while staying responsive.
+                  <span className="mt-3 block font-medium text-cyan-300">Your profile shapes the AI. Your AI shapes your day.</span>
+                </p>
               </div>
-            <div className="hover-lift rounded-3xl border border-indigo-500/20 bg-indigo-500/5 p-5 backdrop-blur-sm transition-all hover:shadow-[0_0_24px_rgba(99,102,241,0.2)]">
-              <p className="text-4xl font-semibold text-indigo-300">0</p>
-              <p className="mt-2 text-sm leading-7 text-slate-400">cognitive load: AI reasoning visible, decisions trusted</p>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href={supabaseConfigured ? "/signup" : "/login"}
+                  className="inline-flex items-center justify-center rounded-full bg-linear-to-r from-cyan-500 to-cyan-600 px-6 py-3 text-sm font-semibold text-[#0f0f1e] shadow-[0_0_24px_rgba(34,211,238,0.4)] transition-all duration-200 hover:shadow-[0_0_40px_rgba(34,211,238,0.6)]"
+                >
+                  {supabaseConfigured ? "Get started" : "Sign in"}
+                </Link>
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center justify-center rounded-full border-2 border-cyan-400/60 bg-cyan-500/20 px-6 py-3 text-sm font-semibold text-cyan-200 transition-all hover:border-cyan-300 hover:bg-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.25)]"
+                >
+                  ✦ Watch 2-min demo
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-6 py-3 text-sm font-semibold text-emerald-300 transition-all hover:border-emerald-400/60 hover:bg-emerald-500/20"
+                >
+                  Open dashboard
+                </Link>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col gap-5">
+          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="glass-card rounded-4xl px-6 py-8 sm:px-8 sm:py-8">
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+                <div className="hover-lift rounded-3xl border border-cyan-500/20 bg-cyan-500/5 p-5 backdrop-blur-sm transition-all hover:shadow-[0_0_24px_rgba(34,211,238,0.2)]">
+                  <p className="text-4xl font-semibold text-cyan-300">∞</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-400">Subjects &amp; projects tracked in parallel without overlap</p>
+                </div>
+                <div className="hover-lift rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-5 backdrop-blur-sm transition-all hover:shadow-[0_0_24px_rgba(16,185,129,0.2)]">
+                  <p className="text-4xl font-semibold text-emerald-300">1</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-400">clear next action (AI-chosen) at the center of every day</p>
+                </div>
+                <div className="hover-lift rounded-3xl border border-indigo-500/20 bg-indigo-500/5 p-5 backdrop-blur-sm transition-all hover:shadow-[0_0_24px_rgba(99,102,241,0.2)]">
+                  <p className="text-4xl font-semibold text-indigo-300">0</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-400">cognitive load: AI reasoning visible, decisions trusted</p>
+                </div>
+              </div>
+
+              <div className="animate-rise-in-soft mt-5 rounded-4xl border border-emerald-500/20 p-6 sm:p-8">
+                <p className="text-sm font-semibold tracking-[0.2em] text-slate-400 uppercase">Product promise</p>
+                <blockquote className="font-display mt-4 text-2xl leading-tight text-slate-100 sm:text-3xl">
+                  &ldquo;The right plan should change with the person, not force every person into the same plan.&rdquo;
+                </blockquote>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-5">
             <div className="animate-rise-in-delayed glass-card hover-lift rounded-4xl p-6 sm:p-8 border-cyan-500/20">
               <div className="mb-5 flex items-center justify-between">
                 <div>
@@ -179,13 +192,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-
-            <div className="animate-rise-in-soft glass-card hover-lift rounded-4xl p-6 sm:p-8 border-emerald-500/20">
-              <p className="text-sm font-semibold tracking-[0.2em] text-slate-400 uppercase">Product promise</p>
-              <blockquote className="font-display mt-4 text-2xl leading-tight text-slate-100 sm:text-3xl">
-                &ldquo;The right plan should change with the person, not force every person into the same plan.&rdquo;
-              </blockquote>
-            </div>
+          </div>
           </div>
         </section>
 
