@@ -10,104 +10,113 @@ Smart planning for every role.
 
 ## Elevator Pitch
 
-Pathly is an adaptive productivity platform that helps users organize their responsibilities and future goals through role-based planning, intelligent prioritization, and personalized next-step guidance.
+Pathly is a multi-role productivity platform that helps users prioritize across Student, Employee, and Teacher responsibilities through role-owned tasks, focused dashboards, and explainable next-step guidance.
 
 ## Problem Statement
 
-Most productivity apps treat every user the same. In practice, a student, an employee, and a teacher each face different kinds of decisions, deadlines, and routines. When tools fail to reflect those differences, users experience overload, poor prioritization, and decision fatigue.
+Most productivity products flatten human responsibilities into one generic list. In real life, one person often lives in several roles at once. When tools ignore that structure, the result is overload, poor prioritization, and constant context switching.
 
 ## Opportunity
 
-Pathly creates a broader and more practical productivity experience by adapting to the user's category. Instead of being a generic to-do list, it uses role-specific context to guide users toward the most relevant next action.
+Pathly can occupy a stronger position than a typical to-do app by treating role context as a first-class planning signal. Instead of one generic backlog, it helps users see what matters in a specific role, what overlaps across roles, and what should happen next.
 
 ## Target Users
 
-### Primary MVP categories
+### Current supported roles
 
 - Student
 - Employee
 - Teacher
 
-### Future categories
+### Future expansion roles
 
 - Freelancer
-- Job seeker
 - Parent
+- Job seeker
 
 ## Core User Problems
 
 ### Student
 
-- Too many assignments and exams at the same time
-- Difficulty deciding what to study first
-- Poor time management and missed deadlines
+- Assignments, exams, and revision compete for limited focus time
+- A flat list does not show what is most urgent or highest leverage
+- Academic planning gets mixed with non-academic responsibilities
 
 ### Employee
 
-- Meetings crowd out deep work
-- Conflicting deadlines across projects
-- Difficulty prioritizing work versus personal goals
+- Meetings and admin crowd out deep work
+- Project tasks compete across deadlines and stakeholders
+- Work responsibilities can dominate everything else without structure
 
 ### Teacher
 
-- Lesson planning, grading, and communication overload
-- Repetitive weekly preparation tasks
-- Limited time to balance teaching and administration
+- Lesson planning, grading, and parent communication create fragmented work
+- Teaching and admin tasks blur together without prioritization
+- Repetitive weekly work still requires active planning energy
+
+### Multi-role users
+
+- One person can be both Student and Employee, or Teacher and planner of other work
+- Shared tasks are hard to identify in generic tools
+- Users need both focused mode and aggregate mode, not one or the other
 
 ## Product Hypothesis
 
-If users receive role-aware prioritization and a clear next-step recommendation instead of a flat list of tasks, they will feel less overwhelmed and be more likely to follow through on important work.
+If tasks belong to a role context first and the interface can switch between focused role mode and an all-roles view, users will feel less overwhelmed and make better next-step decisions than they would in a flat planner.
 
 ## Differentiation
 
-Pathly is different from a basic planner in three ways:
+Pathly is not just role-themed. Its differentiation is structural:
 
-1. It starts with a role-based profile.
-2. It personalizes guidance by category.
-3. It recommends the next best action instead of only storing tasks.
+1. one shared user profile can support multiple role profiles
+2. tasks are role-owned, shared, or general
+3. the dashboard can focus on one role or aggregate all roles
+4. AI suggestions use the same role context as the rest of the product
+5. explanation is visible through recommendation, risk radar, and follow-up guidance
 
 ## Judge-Focused Value
 
-### Impact and Originality
+### Impact and originality
 
-- Solves a real daily pain point
-- Broader than student-only tools without becoming generic
-- Makes productivity feel personalized and actionable
+- solves a real pain point: decision fatigue across multiple responsibilities
+- more specific and defensible than a generic productivity app
+- demonstrates a stronger product thesis than simple task storage
 
-### Functionality and Build Quality
+### Functionality and build quality
 
-- Realistic to build as a strong MVP
-- Clear backend model and user flow
-- Easy to demo with real task scenarios
+- real auth, persistence, schema, and deployment are implemented
+- the data model supports multi-role planning rather than simulating it cosmetically
+- the product includes presentation-specific flows like `/demo`
 
-### Design and User Experience
+### Design and user experience
 
-- Supports a focused, calm dashboard
-- Personalization is visible immediately during onboarding
-- Next-step guidance creates a memorable demo moment
+- the dashboard is built around one next move instead of noise
+- role switching changes the view in a visible and meaningful way
+- suggestions, task list, and calendar all use the same role language
 
-## Success Criteria For MVP
+## Success Criteria
 
-- A user can sign up and log in
-- A user can choose a category and complete a profile
-- A user can add goals and tasks
-- The dashboard shows personalized priorities
-- The app recommends one clear next action
+- a user can sign up, select multiple roles, and reach the dashboard
+- a user can add role-owned, shared, and general tasks
+- a user can switch between focused role mode and all-roles mode
+- the dashboard shows one clear next action with explanation
+- AI suggestions, task list, and calendar remain consistent with role context
 
 ## Demo Narrative
 
-1. A new user signs up.
-2. The user selects Student, Employee, or Teacher.
-3. The user enters tasks, deadlines, and goals.
-4. Pathly generates a personalized dashboard.
-5. The app explains what to do next and why.
+1. show the problem framing on `/demo`
+2. show role-aware onboarding on `/signup`
+3. show the dashboard recommendation and reasoning
+4. show role switching between focused mode and all-roles mode
+5. show role plans, overlaps, and AI suggestions
+6. show that the same lane system appears in the task list and calendar
 
 ## Product Risks
 
-- Scope may become too broad if too many categories are fully supported
-- Personalization may feel shallow if category logic is only cosmetic
-- Recommendation quality may suffer without clear scoring rules
+- if role context falls out of sync with the task model, the product can feel inconsistent
+- if the demo uses weak example data, the multi-role value may not be obvious enough
+- if screenshots are captured in the wrong order, the pitch can sound like a generic planner again
 
 ## Scope Control Decision
 
-To preserve build quality, the first version should use one shared planning engine and adapt it through category-specific profile fields, templates, and recommendation logic.
+Pathly should stay focused on doing three roles well, keeping the role-aware architecture legible, and presenting one strong story instead of adding broader but shallower feature surface.

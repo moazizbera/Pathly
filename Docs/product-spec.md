@@ -2,113 +2,147 @@
 
 ## Core Product Concept
 
-Pathly is a category-aware productivity assistant that helps users organize responsibilities and move toward their goals through personalized planning.
+Pathly is a role-aware productivity assistant that helps one user plan across multiple responsibilities through focused dashboards, role-owned tasks, and explainable next-step guidance.
+
+## Product Model
+
+### Shared account profile
+
+Each user has one base profile that stores:
+
+- full name
+- category summary
+- main goal
+- focus preference
+- availability
+- active role selection
+
+### Role profiles
+
+Each selected role can have its own profile context, including:
+
+- role name
+- role-specific main goal
+- role-specific focus preference
+- role-specific availability
+
+### Tasks
+
+Each task belongs to one of three planning lanes:
+
+- role-owned: attached to exactly one role context
+- shared: relevant across selected roles
+- general: useful without a specific role context
 
 ## Primary Features
 
 ### 1. Authentication
 
-- Sign up with email and password
-- Log in and log out
-- Persistent user account
+- sign up with email and password
+- log in and log out
+- persistent account-backed session
 
-### 2. Category-Based Onboarding
+### 2. Role-Aware Onboarding
 
-- Choose a category during onboarding
-- Collect role-specific profile information
-- Save availability and focus preferences
+- choose one or more supported roles
+- create one shared user profile
+- initialize role profiles for selected roles
+- enter planning preferences and availability
 
-### 3. User Profile
+### 3. Profile Management
 
-- Shared profile fields for all users
-- Category-specific details based on selected role
-- Editable profile screen
+- edit shared profile fields
+- edit per-role planning fields
+- choose a default active role
+- update the role set over time
 
-### 4. Goals And Tasks
+### 4. Task Management
 
-- Create goals
-- Add tasks manually
-- Link tasks to goals
-- Set deadlines and estimated durations
+- add tasks manually
+- edit, complete, reschedule, and delete tasks
+- assign task context as role-owned, shared, or general
+- preserve task role context across list, calendar, and AI suggestions
 
-### 5. Personalized Dashboard
+### 5. Dashboard Experience
 
-- Top priorities for today
-- Recommended next action
-- Explanation of recommendation
-- Role-specific summary cards
+- focused role mode for one selected role
+- all-roles mode for aggregate planning
+- recommended next move
+- reasoning summary, risk radar, and follow-up guidance
+- role plans and overlap visibility
 
-### 6. Recommendation Engine
+### 6. AI Suggestions
 
-- Score tasks based on rules
-- Select one primary recommended action
-- Recompute when data changes
+- generate next-week suggestions
+- prioritize suggestions by current active role when focused
+- group suggestions into Student, Employee, Teacher, Shared, and General lanes
 
-## Shared Profile Fields
+### 7. Weekly Planning View
 
-- Full name
-- Email
-- Category
-- Main goal
-- Weekly availability
-- Focus preference
+- grouped task list by role lane
+- calendar with role-aware visual language
+- drag and drop scheduling support
 
-## Category-Specific Fields
+### 8. Demo And Presentation Support
 
-### Student
+- `/demo` route for judges and short walkthroughs
+- clear story surface for role-aware planning differentiation
 
-- School or university
-- Subjects
-- Exam dates
+## Supported Roles
 
-### Employee
-
-- Company
-- Job title
-- Work hours
-
-### Teacher
-
-- Institution
-- Subjects taught
-- Class schedule
+- Student
+- Employee
+- Teacher
 
 ## Key User Flows
 
 ### New User Flow
 
-1. Open landing page.
-2. Create account.
-3. Choose category.
-4. Fill profile details.
-5. Add initial goals and tasks.
-6. Reach the personalized dashboard.
+1. Open the landing page.
+2. Create an account.
+3. Select one or more roles.
+4. Complete shared profile and role planning context.
+5. Reach the dashboard.
+6. Add tasks or use AI suggestions.
 
 ### Daily Usage Flow
 
-1. Open dashboard.
-2. Review today's priorities.
-3. Start the recommended task.
-4. Mark progress.
-5. Return for updated guidance.
+1. Open the dashboard.
+2. Switch to a focused role or stay in all-roles mode.
+3. Review the recommended next move and explanation.
+4. Add, start, edit, or complete tasks.
+5. Use AI suggest for next-week planning.
+
+### Multi-Role Review Flow
+
+1. Open the dashboard in all-roles mode.
+2. Review role plans and overlaps.
+3. Switch to a focused role.
+4. Inspect tasks, suggestions, and calendar for that role only.
 
 ## Functional Requirements
 
-- The system must associate each profile with exactly one user.
-- The system must store one active category per user.
-- The system must allow task creation, editing, completion, and deletion.
-- The system must generate one visible recommended next action.
-- The dashboard must show personalized content based on category.
+- the system must associate exactly one base profile with each user
+- the system must support multiple role profiles for one user
+- the system must allow one active role selection or an all-roles view
+- the system must allow task creation, editing, completion, deletion, and scheduling
+- the system must store task context as role-owned, shared, or general
+- the dashboard must surface one visible recommended next action
+- the role switcher must change the dashboard context meaningfully
+- AI suggestions must respect the active role when focused
 
 ## UX Requirements
 
-- The first screen after onboarding must show value immediately.
-- The interface must reduce noise and focus the user on a small number of priorities.
-- Recommendations must include a short reason so users trust the result.
+- the first meaningful dashboard screen must show value immediately
+- the interface must reduce noise and highlight one next move
+- role switching must be visible and understandable
+- recommendation surfaces must include short reasoning so the result feels trustworthy
+- the same role vocabulary must appear across suggestions, task list, and calendar
 
 ## MVP Acceptance Criteria
 
-- A user can complete onboarding in one session.
-- A user can save and retrieve tasks after login.
-- A user sees category-aware dashboard content.
-- A user sees at least one recommendation with explanation.
+- a user can complete onboarding and reach the dashboard in one session
+- a user can select multiple roles and save role-specific profile context
+- a user can add and retrieve role-owned, shared, and general tasks
+- a user can switch between focused role mode and all-roles mode
+- the user sees at least one recommendation with explanation

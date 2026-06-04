@@ -1,37 +1,41 @@
 # Pathly Docs
 
-This folder contains the initial planning and execution documents for Pathly.
+This folder contains the current product, delivery, and pitch materials for Pathly.
 
-## Documents
+## Core Docs
 
-- `analysis.md` - problem analysis, user categories, product positioning, and success criteria
-- `tech-stack.md` - recommended architecture, stack, data model, and delivery choices
-- `mvp-plan.md` - MVP scope, milestones, and build order for the hackathon timeline
-- `product-spec.md` - core features, user flows, and functional requirements
-- `deployment.md` - production deployment checklist for Vercel and Supabase
-- `submission-kit.md` - ready-to-use hackathon submission copy and demo summary
-- in-app judge walkthrough at `/demo` - a presentation-friendly route that explains the best demo order, role snapshots, and talking points
+- `analysis.md` - product framing, problem statement, target users, and differentiation
+- `product-spec.md` - current multi-role product model, flows, and requirements
+- `tech-stack.md` - architecture, stack, and implementation choices
+- `deployment.md` - production deployment checklist for Supabase and Cloudflare Workers
+- `submission-kit.md` - hackathon-ready summary, pitch copy, and demo flow
+- `pitch-cheatsheet.md` - 10-second, 30-second, 60-second, and 2-minute spoken pitch versions
+- `screenshot-capture-guide.md` - exact screenshot order, filenames, and capture instructions
+- `notebooklm-video-script.md` - copy-paste NotebookLM prompt and voiceover brief
+- `supabase-schema.sql` - database schema and migrations for the live product
 
 ## Current Product Direction
 
-Pathly is a role-aware productivity assistant that helps users organize tasks, goals, and daily responsibilities based on their category, such as Student, Employee, or Teacher.
+Pathly is a multi-role productivity system that helps one person plan across multiple responsibilities without collapsing everything into one flat backlog.
 
-Core product promise:
+Core promise:
 
 > Smart planning for every role.
 
-## Initial Build Strategy
+## Current Narrative
 
-Build one strong core system first:
+Pathly is strongest when presented as:
 
-1. Authentication and onboarding
-2. Category-based user profiles
-3. Task and goal management
-4. Personalized dashboard
-5. Next-step recommendation engine
+1. one base user profile
+2. multiple role profiles
+3. tasks owned by a role context first
+4. an all-roles view built on top of that structure
+5. AI guidance that explains the next move instead of only listing tasks
 
-The first implementation should support three categories well:
+## Recommended Pitch Assets
 
-- Student
-- Employee
-- Teacher
+- Live app: https://pathly.maziz-abdelrahman.workers.dev/
+- Demo route: `/demo`
+- Screenshot sequence: see `screenshot-capture-guide.md`
+- NotebookLM video prompt: see `notebooklm-video-script.md`
+- Spoken pitch framing: see `pitch-cheatsheet.md`
