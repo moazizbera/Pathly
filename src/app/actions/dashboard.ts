@@ -893,6 +893,32 @@ function interleaveSuggestionGroups(groups: SuggestedTask[][]) {
   return merged;
 }
 
+function groupSuggestionsForAllRoles(tasks: SuggestedTask[]) {
+  const roleGroups: Record<SupportedRole, SuggestedTask[]> = {
+    Student: [],
+    Employee: [],
+    Teacher: [],
+  };
+  const shared: SuggestedTask[] = [];
+  const general: SuggestedTask[] = [];
+
+  for (const task of tasks) {
+    if (task.roles?.length === 1) {
+      roleGroups[task.roles[0]].push(task);
+      continue;
+    }
+
+    if ((task.roles?.length ?? 0) > 1) {
+      shared.push(task);
+      continue;
+    }
+
+    general.push(task);
+  }
+
+  return { roleGroups, shared, general };
+}
+
 export async function suggestTasksForNextWeek(
   userCategory?: string,
   mainGoal?: string,
@@ -1222,6 +1248,21 @@ export async function suggestTasksForNextWeek(
     }
   }
 
-  // Limit to 5 suggestions
-  return { tasks: suggestions.slice(0, 5) };
+  if (focusedRole) {
+    return { tasks: suggestions.slice(0, 8) };
+  }
+
+  const groupedSuggestions = groupSuggestionsForAllRoles(suggestions);
+  const balancedRoleSuggestions = interleaveSuggestionGroups([
+    groupedSuggestions.roleGroups.Student,
+    groupedSuggestions.roleGroups.Employee,
+    groupedSuggestions.roleGroups.Teacher,
+  ]);
+  const finalAllRoleSuggestions = [
+    ...balancedRoleSuggestions,
+    ...groupedSuggestions.shared,
+    ...groupedSuggestions.general,
+  ];
+
+  return { tasks: finalAllRoleSuggestions.slice(0, 12) };
 }

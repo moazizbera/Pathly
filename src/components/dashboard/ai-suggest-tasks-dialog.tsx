@@ -209,7 +209,13 @@ export function AISuggestTasksDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title="Next Week's Priorities">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Next Week's Priorities"
+      panelClassName="max-w-5xl max-h-[94vh]"
+      bodyClassName="px-6 py-6"
+    >
       <div className="space-y-4">
         {stage === "loading" && (
           <div className="space-y-3 text-center py-6">
@@ -232,7 +238,7 @@ export function AISuggestTasksDialog({
                       : `Here are ${suggestions.length} priorities for next week across your roles and general planning. Pick which ones fit your plan.`}
                 </p>
 
-                <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
+                <div className="max-h-[72vh] space-y-4 overflow-y-auto pr-2">
                   {groupedSuggestions.map((group) => (
                     <section
                       key={group.key}
@@ -247,7 +253,7 @@ export function AISuggestTasksDialog({
                         </span>
                       </div>
 
-                      <div className="space-y-2">
+                      <div className="grid gap-3 xl:grid-cols-2">
                         {group.items.map(({ task, index }) => (
                           <button
                             key={task.id}
