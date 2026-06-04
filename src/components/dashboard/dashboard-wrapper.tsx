@@ -465,7 +465,7 @@ export function DashboardWrapper({
             `${count} ${count === 1 ? "task was" : "tasks were"} added to your next-week calendar.`,
           );
         }}
-        userCategory={profile.category}
+        userCategory={availableRoles.join(",") || profile.category}
         mainGoal={profile.mainGoal}
         activeRole={activeRole}
         existingTasks={tasks.map((t) => ({ title: t.title, subject: t.subject ?? undefined }))}
