@@ -919,6 +919,35 @@ function groupSuggestionsForAllRoles(tasks: SuggestedTask[]) {
   return { roleGroups, shared, general };
 }
 
+function ensureRoleCoverage(
+  selectedRoles: Array<"Student" | "Employee" | "Teacher">,
+  currentTasks: SuggestedTask[],
+  fallbackRoleTemplates: SuggestedTask[],
+) {
+  const groupedCurrent = groupSuggestionsForAllRoles(currentTasks);
+  const missingRoles = selectedRoles.filter((role) => groupedCurrent.roleGroups[role].length === 0);
+
+  if (missingRoles.length === 0) {
+    return currentTasks;
+  }
+
+  const currentTitles = new Set(currentTasks.map((task) => normalizeText(task.title)));
+  const injected: SuggestedTask[] = [];
+
+  for (const role of missingRoles) {
+    const fallback = fallbackRoleTemplates.find(
+      (template) => template.roles?.length === 1 && template.roles[0] === role && !currentTitles.has(normalizeText(template.title)),
+    );
+
+    if (fallback) {
+      injected.push(fallback);
+      currentTitles.add(normalizeText(fallback.title));
+    }
+  }
+
+  return [...injected, ...currentTasks];
+}
+
 export async function suggestTasksForNextWeek(
   userCategory?: string,
   mainGoal?: string,
@@ -1252,7 +1281,8 @@ export async function suggestTasksForNextWeek(
     return { tasks: suggestions.slice(0, 8) };
   }
 
-  const groupedSuggestions = groupSuggestionsForAllRoles(suggestions);
+  const suggestionsWithCoverage = ensureRoleCoverage(selectedRoles, suggestions, roleTemplates);
+  const groupedSuggestions = groupSuggestionsForAllRoles(suggestionsWithCoverage);
   const balancedRoleSuggestions = interleaveSuggestionGroups([
     groupedSuggestions.roleGroups.Student,
     groupedSuggestions.roleGroups.Employee,

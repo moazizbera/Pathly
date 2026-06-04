@@ -213,8 +213,9 @@ export function AISuggestTasksDialog({
       open={open}
       onClose={onClose}
       title="Next Week's Priorities"
-      panelClassName="max-w-[96vw] h-[94vh]"
-      bodyClassName="flex-1 px-6 py-6"
+      fullscreen
+      panelClassName="sm:border-l sm:border-r sm:border-slate-800/60"
+      bodyClassName="flex-1 px-4 py-4 sm:px-6 sm:py-6"
     >
       <div className="space-y-4">
         {stage === "loading" && (

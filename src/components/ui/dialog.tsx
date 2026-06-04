@@ -9,9 +9,10 @@ type DialogProps = {
   children: ReactNode;
   panelClassName?: string;
   bodyClassName?: string;
+  fullscreen?: boolean;
 };
 
-export function Dialog({ open, onClose, title, children, panelClassName, bodyClassName }: DialogProps) {
+export function Dialog({ open, onClose, title, children, panelClassName, bodyClassName, fullscreen = false }: DialogProps) {
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
     return () => {
@@ -24,13 +25,13 @@ export function Dialog({ open, onClose, title, children, panelClassName, bodyCla
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-3 sm:items-center sm:p-5">
+    <div className={`fixed inset-0 z-50 flex ${fullscreen ? "items-stretch justify-stretch p-0" : "items-end justify-center p-3 sm:items-center sm:p-5"}`}>
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className={`relative flex max-h-[88vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-700/40 bg-[#0c1120] shadow-[0_24px_80px_rgba(0,0,0,0.7)] ${panelClassName ?? ""}`}>
+      <div className={`relative flex ${fullscreen ? "h-full w-full max-h-none max-w-none rounded-none border-0" : "max-h-[88vh] w-full max-w-xl rounded-3xl border border-slate-700/40"} flex-col overflow-hidden bg-[#0c1120] shadow-[0_24px_80px_rgba(0,0,0,0.7)] ${panelClassName ?? ""}`}>
         <div className="flex shrink-0 items-center justify-between border-b border-slate-800/60 px-5 py-4">
           {title ? (
             <p className="text-sm font-semibold text-slate-200">{title}</p>
